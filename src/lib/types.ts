@@ -3,9 +3,12 @@ export type JobStatus =
   | "open"
   | "negotiating"
   | "locked"
+  | "escrow_authorized"
+  | "ready_for_dispatch"
   | "dispatched"
   | "in_progress"
   | "completed"
+  | "pending_admin_release"
   | "released"
   | "cancelled"
   | "disputed";
@@ -25,7 +28,10 @@ export type ResolutionType =
   | "customer_refund"
   | "provider_payment"
   | "split"
-  | "dismissed";
+  | "dismissed"
+  | "price_adjusted"
+  | "partial_refund"
+  | "full_refund";
 export type NotificationType =
   | "newJobAlert"
   | "newOfferAlert"
@@ -137,6 +143,8 @@ export interface Database {
           location_coordinates: string | null;
           junk_types: JunkType[];
           estimated_volume: string | null;
+          budget_cents: number | null;
+          preferred_time: string | null;
           photos_urls: string[];
           status: JobStatus;
           agreed_price_cents: number | null;
@@ -156,6 +164,8 @@ export interface Database {
           location_coordinates?: string | null;
           junk_types: JunkType[];
           estimated_volume?: string | null;
+          budget_cents?: number | null;
+          preferred_time?: string | null;
           photos_urls?: string[];
           status?: JobStatus;
           agreed_price_cents?: number | null;
@@ -173,6 +183,8 @@ export interface Database {
           location_coordinates?: string | null;
           junk_types?: JunkType[];
           estimated_volume?: string | null;
+          budget_cents?: number | null;
+          preferred_time?: string | null;
           photos_urls?: string[];
           status?: JobStatus;
           agreed_price_cents?: number | null;
@@ -190,6 +202,8 @@ export interface Database {
           status: OfferStatus;
           price_cents: number;
           notes: string | null;
+          turn_number: number;
+          expires_at: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -202,6 +216,8 @@ export interface Database {
           status: string;
           price_cents: number;
           notes?: string | null;
+          turn_number?: number;
+          expires_at?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -212,6 +228,30 @@ export interface Database {
           status?: string;
           price_cents?: number;
           notes?: string | null;
+          turn_number?: number;
+          expires_at?: string | null;
+          deleted_at?: string | null;
+        };
+      };
+      messages: {
+        Row: {
+          id: string;
+          job_id: string;
+          sender_id: string;
+          content: string;
+          created_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          job_id: string;
+          sender_id: string;
+          content: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          job_id?: string;
+          sender_id?: string;
+          content?: string;
           deleted_at?: string | null;
         };
       };
@@ -521,10 +561,13 @@ export interface Database {
 export const VALID_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   open: ["negotiating", "cancelled"],
   negotiating: ["open", "locked", "cancelled"],
-  locked: ["dispatched", "cancelled"],
+  locked: ["escrow_authorized", "cancelled"],
+  escrow_authorized: ["ready_for_dispatch", "cancelled", "disputed"],
+  ready_for_dispatch: ["dispatched", "cancelled"],
   dispatched: ["in_progress", "cancelled"],
   in_progress: ["completed", "disputed", "cancelled"],
-  completed: ["released", "disputed", "cancelled"],
+  completed: ["released", "disputed", "pending_admin_release", "cancelled"],
+  pending_admin_release: ["released", "disputed", "cancelled"],
   released: [],
   cancelled: [],
   disputed: ["released", "cancelled"],

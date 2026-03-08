@@ -15,6 +15,8 @@ export async function createJob(
     location_address: string;
     junk_types: JunkType[];
     estimated_volume?: string;
+    budget_cents?: number;
+    preferred_time?: string;
     photos_urls?: string[];
   }
 ) {
@@ -32,6 +34,8 @@ export async function createJob(
       location_address: data.location_address,
       junk_types: data.junk_types,
       estimated_volume: data.estimated_volume || null,
+      budget_cents: data.budget_cents || null,
+      preferred_time: data.preferred_time || null,
       photos_urls: data.photos_urls || [],
       status: "open",
     })
