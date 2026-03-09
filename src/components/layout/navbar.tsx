@@ -34,6 +34,7 @@ export function Navbar({ userRole, userName }: NavbarProps) {
     admin: [
       { label: "Dashboard", href: "/admin/dashboard" },
       { label: "Jobs", href: "/admin/jobs" },
+      { label: "Dispatch", href: "/admin/dispatch" },
       { label: "Disputes", href: "/admin/disputes" },
       { label: "Verifications", href: "/admin/verifications" },
       { label: "Users", href: "/admin/users" },

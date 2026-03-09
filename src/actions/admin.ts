@@ -169,3 +169,151 @@ export async function getAdminMetrics() {
 
   return { totalUsers, totalJobs, activeJobs, pendingVerifications, openDisputes, totalEscrow };
 }
+
+/** Comprehensive dashboard data for the admin command center */
+export async function getAdminDashboardData() {
+  const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("Not authenticated");
+
+  const { data: adminProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .single();
+
+  if (!adminProfile || adminProfile.role !== "admin") {
+    throw new Error("Only admins can view dashboard");
+  }
+
+  // --- All counts in parallel ---
+  const [
+    { count: totalUsers },
+    { count: totalCustomers },
+    { count: totalProviders },
+    { count: totalJobs },
+    { count: activeJobs },
+    { count: releasedJobs },
+    { count: cancelledJobs },
+    { count: pendingVerifications },
+    { count: openDisputes },
+    { count: dispatchQueue },
+    { count: trialUsers },
+    { count: paidUsers },
+  ] = await Promise.all([
+    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "customer"),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "provider"),
+    supabase.from("jobs").select("*", { count: "exact", head: true }).is("deleted_at", null),
+    supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["open", "negotiating", "locked", "escrow_authorized", "ready_for_dispatch", "dispatched", "in_progress"]),
+    supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "released"),
+    supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "cancelled"),
+    supabase.from("provider_verifications").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("disputes").select("*", { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["escrow_authorized", "ready_for_dispatch"]),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "provider").eq("subscription_active", false).not("trial_ends_at", "is", null),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "provider").eq("subscription_active", true),
+  ]);
+
+  // --- Escrow totals ---
+  const [{ data: escrowHeld }, { data: escrowReleased }] = await Promise.all([
+    supabase.from("escrow_payments").select("amount_cents").in("status", ["requires_capture", "processing"]).is("deleted_at", null),
+    supabase.from("escrow_payments").select("amount_cents").eq("status", "succeeded").is("deleted_at", null),
+  ]);
+
+  const totalEscrowHeld = escrowHeld?.reduce((s: number, e) => s + e.amount_cents, 0) || 0;
+  const totalEscrowReleased = escrowReleased?.reduce((s: number, e) => s + e.amount_cents, 0) || 0;
+
+  // --- Pending admin release ---
+  const { data: confirmations } = await supabase
+    .from("confirmations")
+    .select("provider_confirmed_at")
+    .eq("provider_confirmed", true)
+    .eq("customer_confirmed", false)
+    .is("deleted_at", null);
+
+  const now = new Date();
+  const pendingRelease = (confirmations || []).filter((c) => {
+    if (!c.provider_confirmed_at) return false;
+    const hours = (now.getTime() - new Date(c.provider_confirmed_at).getTime()) / (1000 * 60 * 60);
+    return hours >= 48;
+  }).length;
+
+  // --- Job pipeline (count per status) ---
+  const { data: allJobs } = await supabase
+    .from("jobs")
+    .select("status")
+    .is("deleted_at", null);
+
+  const pipeline: Record<string, number> = {};
+  (allJobs || []).forEach((j) => {
+    pipeline[j.status] = (pipeline[j.status] || 0) + 1;
+  });
+
+  // --- Recent jobs (last 10) with customer name ---
+  const { data: recentJobsRaw } = await supabase
+    .from("jobs")
+    .select("id, title, status, created_at, agreed_price_cents, budget_cents, location_city, profiles!jobs_customer_id_fkey(display_name)")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const recentJobs = (recentJobsRaw || []).map((j: any) => {
+    const cust = Array.isArray(j.profiles) ? j.profiles[0] : j.profiles;
+    return {
+      id: j.id,
+      title: j.title,
+      status: j.status,
+      created_at: j.created_at,
+      agreed_price_cents: j.agreed_price_cents,
+      budget_cents: j.budget_cents,
+      location_city: j.location_city,
+      customer_name: cust?.display_name || "Unknown",
+    };
+  });
+
+  // --- Recent signups (last 10) ---
+  const { data: recentSignups } = await supabase
+    .from("profiles")
+    .select("id, display_name, email, role, created_at, is_verified, subscription_active")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  // --- Top providers ---
+  const { data: topProviders } = await supabase
+    .from("profiles")
+    .select("id, display_name, avg_rating, total_jobs_completed, subscription_active, is_verified")
+    .eq("role", "provider")
+    .order("total_jobs_completed", { ascending: false })
+    .limit(5);
+
+  return {
+    kpi: {
+      totalUsers: totalUsers || 0,
+      totalCustomers: totalCustomers || 0,
+      totalProviders: totalProviders || 0,
+      totalJobs: totalJobs || 0,
+      activeJobs: activeJobs || 0,
+      releasedJobs: releasedJobs || 0,
+      cancelledJobs: cancelledJobs || 0,
+      totalEscrowHeld,
+      totalEscrowReleased,
+    },
+    actionItems: {
+      pendingVerifications: pendingVerifications || 0,
+      openDisputes: openDisputes || 0,
+      dispatchQueue: dispatchQueue || 0,
+      pendingRelease,
+    },
+    pipeline,
+    subscriptions: {
+      trial: trialUsers || 0,
+      paid: paidUsers || 0,
+      free: Math.max(0, (totalProviders || 0) - (trialUsers || 0) - (paidUsers || 0)),
+    },
+    recentJobs,
+    recentSignups: recentSignups || [],
+    topProviders: topProviders || [],
+  };
+}
