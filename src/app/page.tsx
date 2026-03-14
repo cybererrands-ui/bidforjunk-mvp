@@ -41,7 +41,8 @@ function Hero() {
           Get Junk Removal Quotes in Hamilton&nbsp;&mdash; Fast.
         </h1>
         <p className="mt-6 text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-          Post once. Get multiple offers. Lock a price. Pay safely in escrow.
+          Get junk removal quotes fast &mdash; no credit card required.
+          Compare verified, insured local providers.
         </p>
 
         {/* CTAs */}
@@ -54,11 +55,11 @@ function Hero() {
             <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
           <Link
-            href="/signup"
+            href="/pricing"
             className="btn-secondary text-lg px-8 py-3.5 border border-gray-300"
           >
             <Truck className="mr-2 h-5 w-5 text-green-600" />
-            Providers: Apply &amp; Get Jobs
+            Providers: See Plans &amp; Pricing
           </Link>
         </div>
 
@@ -70,7 +71,7 @@ function Hero() {
           </span>
           <span className="flex items-center gap-1.5">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            Escrow Payments
+            No Credit Card Required
           </span>
           <span className="flex items-center gap-1.5">
             <CheckCircle className="h-4 w-4 text-green-600" />
@@ -102,9 +103,9 @@ const steps = [
   },
   {
     num: 3,
-    title: "Pay & Get It Done",
+    title: "Hire & Get It Done",
     description:
-      "Pay securely in escrow. We dispatch a provider. Confirm when done. Money releases.",
+      "Accept the best quote, coordinate directly with your verified provider, and get your junk removed.",
     icon: Truck,
   },
 ];
@@ -152,10 +153,10 @@ function HowItWorks() {
 /*  SECTION 3 — OFFER STACK (What You Get)                             */
 /* ------------------------------------------------------------------ */
 const benefits = [
-  "Multiple offers in one place",
-  "Price locked before dispatch",
-  "Escrow held until the job is done",
-  "Dispute support for scope mismatch",
+  "Multiple quotes in one place",
+  "Every provider is ID-verified and insured",
+  "No credit card needed to post a job",
+  "Negotiate directly and lock a fair price",
 ];
 
 function OfferStack() {
@@ -189,17 +190,17 @@ const trustItems = [
   {
     icon: Users,
     title: "Provider Verification",
-    text: "Every provider submits ID and business docs. Our team reviews them before they can bid.",
+    text: "Every provider submits government ID, business registration, and proof of insurance. Our team reviews everything before they can quote.",
   },
   {
     icon: Shield,
-    title: "Escrow Protection",
-    text: "Your money is held safely in escrow. It only releases after you confirm the job is done.",
+    title: "Insurance Verified",
+    text: "All providers carry active insurance. We track expiry dates and automatically hide providers with expired coverage.",
   },
   {
     icon: HelpCircle,
-    title: "Dispute Resolution",
-    text: "If there's more junk than posted or a scope mismatch, we step in and help resolve it.",
+    title: "Dispute Support",
+    text: "If there's more junk than described or a scope mismatch, our support team helps mediate a fair resolution.",
   },
 ];
 
@@ -211,7 +212,7 @@ function TrustAndSafety() {
           Trust &amp; Safety Built In
         </h2>
         <p className="mt-3 text-center text-gray-500 text-lg">
-          Your money and your property are protected at every step.
+          Every provider is verified, insured, and accountable.
         </p>
 
         <div className="mt-14 grid md:grid-cols-3 gap-8">
@@ -254,7 +255,7 @@ const testimonials = [
     name: "James T.",
     location: "Dundas, ON",
     quote:
-      "The escrow feature gave me peace of mind. I didn't release payment until every last item was gone.",
+      "Knowing every provider was verified and insured gave me total peace of mind. The job was done right.",
     stars: 5,
   },
   {

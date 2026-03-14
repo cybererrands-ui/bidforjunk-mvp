@@ -5,9 +5,14 @@ import { ChevronDown, HelpCircle } from "lucide-react";
 
 const faqs = [
   {
-    question: "How does escrow work?",
+    question: "Do I need a credit card to post a job?",
     answer:
-      "When you lock a price with a provider, your payment is held securely in escrow by our payment partner. The provider completes the job. You confirm the work is done. Only then does the money release to the provider. If something goes wrong, you're covered.",
+      "No. Posting a job is completely free — no credit card required. Describe your junk, add photos, set a budget, and start receiving quotes from verified local providers.",
+  },
+  {
+    question: "How do I pay the provider?",
+    answer:
+      "Payment is arranged directly between you and your chosen provider. Once you accept a quote and the job is complete, you pay the provider at the agreed price. BidForJunk connects you with verified professionals — we handle the trust, you handle the transaction.",
   },
   {
     question: "What if there's more junk than I posted?",
@@ -17,7 +22,7 @@ const faqs = [
   {
     question: "How do providers get verified?",
     answer:
-      "Every provider submits government-issued ID, proof of insurance, and business documentation. Our team reviews each application before granting access. Only verified providers can bid on jobs. We do this so you never have to worry about who shows up.",
+      "Every provider submits government-issued ID, business registration, and proof of insurance. Our team reviews each application before granting access. Only verified, insured providers can quote on jobs. Providers with expired insurance are automatically hidden.",
   },
   {
     question: "How does pricing/budget work?",

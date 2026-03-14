@@ -11,6 +11,55 @@ export const JUNK_TYPES: Record<JunkType, string> = {
   other: "Other",
 };
 
+// ── Subscription tiers ──────────────────────────────────────
+export type SubscriptionTier = "free" | "starter" | "growth" | "dominator";
+
+export const SUBSCRIPTION_TIERS: Record<
+  SubscriptionTier,
+  {
+    name: string;
+    priceCAD: number;
+    quoteCap: number; // per period
+    period: "week" | "month";
+    highlighted: boolean;
+    tagline: string;
+  }
+> = {
+  free: {
+    name: "Free",
+    priceCAD: 0,
+    quoteCap: 5, // verified free, 3 if unverified (handled at runtime)
+    period: "week",
+    highlighted: false,
+    tagline: "Get started and explore",
+  },
+  starter: {
+    name: "Starter",
+    priceCAD: 45,
+    quoteCap: 15,
+    period: "month",
+    highlighted: false,
+    tagline: "Solo haulers ready to grow",
+  },
+  growth: {
+    name: "Growth",
+    priceCAD: 78,
+    quoteCap: 60,
+    period: "month",
+    highlighted: true,
+    tagline: "Active operators winning more jobs",
+  },
+  dominator: {
+    name: "Dominator",
+    priceCAD: 288,
+    quoteCap: Infinity,
+    period: "month",
+    highlighted: false,
+    tagline: "Own your local market",
+  },
+};
+
+/** Legacy compat — keep for any code still referencing BID_LIMITS */
 export const BID_LIMITS = {
   unverified: 3,
   verified_free: 5,
@@ -18,6 +67,20 @@ export const BID_LIMITS = {
 };
 
 export const BID_LIMIT_PERIOD_DAYS = 7;
+
+/** Get the effective quote cap for a provider */
+export function getQuoteCap(
+  tier: SubscriptionTier,
+  isVerified: boolean
+): number {
+  if (tier === "free") return isVerified ? 5 : 3;
+  return SUBSCRIPTION_TIERS[tier].quoteCap;
+}
+
+/** Get the quota period label */
+export function getQuotaPeriod(tier: SubscriptionTier): string {
+  return SUBSCRIPTION_TIERS[tier].period === "week" ? "/ week" : "/ month";
+}
 
 // Negotiation guardrails
 export const MAX_NEGOTIATION_TURNS = 3; // Max 3 offer turns per side
@@ -92,3 +155,42 @@ export const PRIORITY_WEIGHTS = {
   avg_rating_multiplier: 5,
   jobs_completed_multiplier: 1,
 };
+
+// ── Provider verification statuses ─────────────────────────
+export const VERIFICATION_STATUS = {
+  not_started: "Not Started",
+  pending: "Pending Review",
+  approved: "Approved",
+  rejected: "Rejected",
+} as const;
+
+// ── ID Types ────────────────────────────────────────────────
+export const ID_TYPES = {
+  drivers_license: "Driver's License",
+  passport: "Passport",
+  provincial_id: "Provincial ID",
+} as const;
+
+// ── Business Types ──────────────────────────────────────────
+export const BUSINESS_TYPES = {
+  sole_proprietorship: "Sole Proprietorship",
+  corporation: "Corporation",
+  partnership: "Partnership",
+} as const;
+
+// ── Canadian Provinces ──────────────────────────────────────
+export const PROVINCES = {
+  ON: "Ontario",
+  BC: "British Columbia",
+  AB: "Alberta",
+  QC: "Quebec",
+  MB: "Manitoba",
+  SK: "Saskatchewan",
+  NS: "Nova Scotia",
+  NB: "New Brunswick",
+  NL: "Newfoundland and Labrador",
+  PE: "Prince Edward Island",
+} as const;
+
+// ── Insurance expiry warning thresholds (days) ──────────────
+export const INSURANCE_EXPIRY_WARNINGS = [30, 14, 7, 1] as const;
