@@ -43,6 +43,10 @@ export async function completeOnboarding(
     insurance_effective_date?: string;
     insurance_expiry_date?: string;
     insurance_certificate_url?: string;
+    // Additional fields
+    years_in_business?: number;
+    payment_methods_accepted?: string[];
+    fleet_photos_urls?: string[];
   }
 ) {
   const admin = createAdminClient();
@@ -113,6 +117,14 @@ export async function completeOnboarding(
     updatePayload.insurance_expiry_date = data.insurance_expiry_date;
   if (data.insurance_certificate_url !== undefined)
     updatePayload.insurance_certificate_url = data.insurance_certificate_url;
+
+  // Additional fields
+  if (data.years_in_business !== undefined)
+    updatePayload.years_in_business = data.years_in_business;
+  if (data.payment_methods_accepted !== undefined)
+    updatePayload.payment_methods_accepted = data.payment_methods_accepted;
+  if (data.fleet_photos_urls !== undefined)
+    updatePayload.fleet_photos_urls = data.fleet_photos_urls;
 
   const { error } = await admin
     .from("profiles")

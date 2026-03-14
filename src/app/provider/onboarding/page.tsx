@@ -14,6 +14,7 @@ import {
   ID_TYPES,
   BUSINESS_TYPES,
   PROVINCES,
+  PAYMENT_METHODS,
 } from "@/lib/constants";
 import { completeOnboarding } from "@/actions/providers";
 import {
@@ -63,7 +64,11 @@ export default function ProviderOnboardingPage() {
     same_day_available: false,
     disposal_practices: "",
     hours_of_operation: "",
+    years_in_business: "",
+    payment_methods_accepted: [] as string[],
   });
+
+  const [fleetFiles, setFleetFiles] = useState<File[]>([]);
 
   // ── Identity ────────────────────────────────────────────
   const [identityData, setIdentityData] = useState({
@@ -159,6 +164,7 @@ export default function ProviderOnboardingPage() {
       // Upload files if provided
       let idDocUrl: string | undefined;
       let insuranceCertUrl: string | undefined;
+      let fleetPhotoUrls: string[] = [];
 
       if (idFile) {
         idDocUrl = await uploadFile(profile.id, idFile, "id-documents");
@@ -169,6 +175,12 @@ export default function ProviderOnboardingPage() {
           insuranceFile,
           "insurance-certificates"
         );
+      }
+      if (fleetFiles.length > 0) {
+        for (const file of fleetFiles) {
+          const url = await uploadFile(profile.id, file, "fleet-photos");
+          fleetPhotoUrls.push(url);
+        }
       }
 
       // Complete onboarding with all data
@@ -220,6 +232,16 @@ export default function ProviderOnboardingPage() {
         insurance_expiry_date:
           insuranceData.insurance_expiry_date || undefined,
         insurance_certificate_url: insuranceCertUrl,
+        // Additional fields
+        years_in_business: serviceData.years_in_business
+          ? parseInt(serviceData.years_in_business)
+          : undefined,
+        payment_methods_accepted:
+          serviceData.payment_methods_accepted.length > 0
+            ? serviceData.payment_methods_accepted
+            : undefined,
+        fleet_photos_urls:
+          fleetPhotoUrls.length > 0 ? fleetPhotoUrls : undefined,
       });
 
       router.push("/provider/dashboard");
@@ -464,6 +486,74 @@ export default function ProviderOnboardingPage() {
               }
               placeholder="Describe how you handle disposal, recycling, and donations..."
             />
+
+            <Input
+              label="Years in Business"
+              value={serviceData.years_in_business}
+              onChange={(e) =>
+                setServiceData((prev) => ({
+                  ...prev,
+                  years_in_business: e.target.value,
+                }))
+              }
+              type="number"
+              placeholder="e.g., 5"
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Payment Methods Accepted
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(PAYMENT_METHODS).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={serviceData.payment_methods_accepted.includes(key)}
+                      onChange={() =>
+                        setServiceData((prev) => ({
+                          ...prev,
+                          payment_methods_accepted:
+                            prev.payment_methods_accepted.includes(key)
+                              ? prev.payment_methods_accepted.filter(
+                                  (m) => m !== key
+                                )
+                              : [...prev.payment_methods_accepted, key],
+                        }))
+                      }
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Photos of Truck / Team (optional)
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Upload photos of your truck, equipment, or team. Profiles with
+                photos get more bids accepted.
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setFleetFiles(Array.from(e.target.files));
+                  }
+                }}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+              />
+              {fleetFiles.length > 0 && (
+                <p className="mt-2 text-sm text-green-600">
+                  {fleetFiles.length} photo(s) selected
+                </p>
+              )}
+            </div>
 
             <Textarea
               label="Bio"
@@ -878,6 +968,29 @@ export default function ProviderOnboardingPage() {
                   <p>
                     <span className="font-medium">Crew size:</span>{" "}
                     {serviceData.crew_size}
+                  </p>
+                )}
+                {serviceData.years_in_business && (
+                  <p>
+                    <span className="font-medium">Years in business:</span>{" "}
+                    {serviceData.years_in_business}
+                  </p>
+                )}
+                {serviceData.payment_methods_accepted.length > 0 && (
+                  <p>
+                    <span className="font-medium">Payment methods:</span>{" "}
+                    {serviceData.payment_methods_accepted
+                      .map(
+                        (m) =>
+                          (PAYMENT_METHODS as Record<string, string>)[m] || m
+                      )
+                      .join(", ")}
+                  </p>
+                )}
+                {fleetFiles.length > 0 && (
+                  <p>
+                    <span className="font-medium">Fleet photos:</span>{" "}
+                    {fleetFiles.length} photo(s) selected
                   </p>
                 )}
               </div>

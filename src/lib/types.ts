@@ -114,6 +114,10 @@ export interface Database {
           same_day_available: boolean;
           disposal_practices: string | null;
           hours_of_operation: string | null;
+          // Additional provider fields
+          years_in_business: number | null;
+          payment_methods_accepted: string[];
+          fleet_photos_urls: string[];
           // Subscription tier
           subscription_tier: string;
           monthly_quotes_used: number;
@@ -175,6 +179,9 @@ export interface Database {
           same_day_available?: boolean;
           disposal_practices?: string | null;
           hours_of_operation?: string | null;
+          years_in_business?: number | null;
+          payment_methods_accepted?: string[];
+          fleet_photos_urls?: string[];
           subscription_tier?: string;
           monthly_quotes_used?: number;
           monthly_quotes_reset_at?: string | null;
@@ -241,6 +248,9 @@ export interface Database {
           same_day_available?: boolean;
           disposal_practices?: string | null;
           hours_of_operation?: string | null;
+          years_in_business?: number | null;
+          payment_methods_accepted?: string[];
+          fleet_photos_urls?: string[];
           subscription_tier?: string;
           monthly_quotes_used?: number;
           monthly_quotes_reset_at?: string | null;

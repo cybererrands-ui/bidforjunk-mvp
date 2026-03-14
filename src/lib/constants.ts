@@ -192,5 +192,15 @@ export const PROVINCES = {
   PE: "Prince Edward Island",
 } as const;
 
+// ── Payment Methods ─────────────────────────────────────────
+export const PAYMENT_METHODS = {
+  cash: "Cash",
+  e_transfer: "E-Transfer",
+  credit_card: "Credit Card",
+  debit: "Debit",
+  cheque: "Cheque",
+  invoice: "Invoice / Net Terms",
+} as const;
+
 // ── Insurance expiry warning thresholds (days) ──────────────
 export const INSURANCE_EXPIRY_WARNINGS = [30, 14, 7, 1] as const;
