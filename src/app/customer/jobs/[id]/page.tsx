@@ -10,6 +10,7 @@ import {
   RejectOfferButton,
   CancelJobButton,
   ConfirmCompletionButton,
+  CustomerChatThread,
 } from "./job-actions";
 
 export default async function JobDetailPage({
@@ -319,6 +320,9 @@ export default async function JobDetailPage({
               </div>
             )}
           </Card>
+
+          {/* Chat / Messages thread */}
+          <CustomerChatThread jobId={job.id} profileId={profile.id} />
         </div>
 
         {/* Sidebar - right col */}

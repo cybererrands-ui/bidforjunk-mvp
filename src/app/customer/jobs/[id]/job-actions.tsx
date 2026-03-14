@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { acceptOffer } from "@/actions/offers";
 import { cancelJob } from "@/actions/jobs";
-import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { sendMessage, getMessages } from "@/actions/messages";
+import { CheckCircle, XCircle, AlertTriangle, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
 
 // Accept Offer Button
 export function AcceptOfferButton({ offerId }: { offerId: string }) {
@@ -165,5 +169,177 @@ export function ConfirmCompletionButton({
       </button>
       {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
     </div>
+  );
+}
+
+// Customer Chat Thread
+interface ChatMessage {
+  id: string;
+  job_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  sender: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+    role: string;
+  } | null;
+}
+
+export function CustomerChatThread({
+  jobId,
+  profileId,
+}: {
+  jobId: string;
+  profileId: string;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatMessage, setChatMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
+
+  const loadMessages = useCallback(async () => {
+    try {
+      const msgs = await getMessages(jobId);
+      setMessages((msgs as any as ChatMessage[]) || []);
+    } catch {
+      // Messages may fail if none exist yet
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [jobId]);
+
+  // Initial load
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  // Real-time subscription for new messages
+  useEffect(() => {
+    const channel = supabase
+      .channel(`messages:${jobId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `job_id=eq.${jobId}`,
+        },
+        () => {
+          // Refetch all messages on new insert to get sender info
+          loadMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [jobId, supabase, loadMessages]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatMessage.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    const text = chatMessage;
+    setChatMessage("");
+
+    try {
+      await sendMessage(jobId, profileId, text);
+      await loadMessages();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send message");
+      setChatMessage(text); // Restore on failure
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (initialLoading) {
+    return (
+      <Card>
+        <h2 className="font-semibold text-lg mb-4">Messages</h2>
+        <p className="text-gray-500 text-sm py-4">Loading messages...</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <h2 className="font-semibold text-lg mb-4">Messages</h2>
+
+      {messages.length > 0 ? (
+        <div
+          ref={scrollRef}
+          className="space-y-3 max-h-96 overflow-y-auto mb-4 pr-1"
+        >
+          {messages.map((msg) => {
+            const isMe = msg.sender_id === profileId;
+            return (
+              <div
+                key={msg.id}
+                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[75%] rounded-lg px-4 py-2 ${
+                    isMe
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-100 text-gray-900"
+                  }`}
+                >
+                  <p className="text-xs font-medium mb-1 opacity-80">
+                    {msg.sender?.display_name ?? "Unknown"}
+                  </p>
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <p className="text-xs mt-1 opacity-60">
+                    {formatDate(msg.created_at)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-gray-500 text-sm mb-4">
+          No messages yet. Send a message to the provider!
+        </p>
+      )}
+
+      {error && (
+        <p className="text-red-600 text-xs mb-2">{error}</p>
+      )}
+
+      <form onSubmit={handleSend} className="flex gap-2">
+        <input
+          type="text"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          placeholder="Type a message..."
+          value={chatMessage}
+          onChange={(e) => setChatMessage(e.target.value)}
+        />
+        <button
+          type="submit"
+          disabled={loading || !chatMessage.trim()}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+        >
+          <Send className="w-4 h-4" />
+          {loading ? "Sending..." : "Send"}
+        </button>
+      </form>
+    </Card>
   );
 }
