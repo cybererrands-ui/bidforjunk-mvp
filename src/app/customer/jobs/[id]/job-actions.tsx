@@ -292,11 +292,10 @@ export function CustomerChatThread({
 
       <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
         <p className="text-xs text-amber-800 font-medium">
-          All communication must stay on BidForJunk. Sharing contact
-          information (phone, email, social media) is prohibited. Any
-          transactions conducted outside the platform are at your sole
-          risk and not covered by our escrow protection or dispute
-          resolution.
+          Keep all communication on BidForJunk until you accept an offer.
+          Once accepted, your provider&apos;s contact info will be shared
+          with you. Any work arranged outside the platform is at your
+          sole risk and not covered by our dispute resolution.
         </p>
       </div>
 

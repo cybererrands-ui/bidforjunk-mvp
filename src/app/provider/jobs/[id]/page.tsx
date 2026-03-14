@@ -16,6 +16,7 @@ import { markInProgress } from "@/actions/dispatch";
 import { confirmCompletion } from "@/actions/confirmations";
 import { sendMessage, getMessages } from "@/actions/messages";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { Phone, Mail, UserCheck } from "lucide-react";
 
 interface Message {
   id: string;
@@ -67,7 +68,7 @@ export default function ProviderJobDetailPage({
 
       setProfile(profileData);
 
-      // Fetch job
+      // Fetch job (include customer phone for contact release)
       const { data: jobData } = await supabase
         .from("jobs")
         .select(
@@ -76,7 +77,8 @@ export default function ProviderJobDetailPage({
           customer:profiles!jobs_customer_id_fkey (
             id,
             display_name,
-            email
+            email,
+            phone_number
           )
         `
         )
@@ -442,11 +444,11 @@ export default function ProviderJobDetailPage({
 
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-xs text-amber-800 font-medium">
-                All communication must stay on BidForJunk. Sharing contact
-                information (phone, email, social media) is prohibited. Any
-                transactions conducted outside the platform are at the
-                customer&apos;s sole risk and not covered by our escrow
-                protection or dispute resolution.
+                Keep all communication on BidForJunk until a bid is
+                accepted. Once the customer accepts your offer, their
+                contact info will be shared with you. Any work arranged
+                outside the platform is at your sole risk and not covered
+                by our dispute resolution.
               </p>
             </div>
 
@@ -613,11 +615,60 @@ export default function ProviderJobDetailPage({
             </Card>
           )}
 
-          {/* Customer info */}
+          {/* Customer info + contact release */}
           {customer && (
             <Card>
-              <h2 className="font-semibold mb-2">Customer</h2>
-              <p className="text-sm">{customer.display_name}</p>
+              {job.contact_released_at ? (
+                <>
+                  <h2 className="font-semibold mb-3 flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-green-600" />
+                    Customer Contact
+                  </h2>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium">{customer.display_name}</p>
+                    {customer.phone_number && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-gray-400" />
+                        <a
+                          href={`tel:${customer.phone_number}`}
+                          className="text-green-700 hover:underline"
+                        >
+                          {customer.phone_number}
+                        </a>
+                      </div>
+                    )}
+                    {customer.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-gray-400" />
+                        <a
+                          href={`mailto:${customer.email}`}
+                          className="text-green-700 hover:underline"
+                        >
+                          {customer.email}
+                        </a>
+                      </div>
+                    )}
+                    {!customer.phone_number && !customer.email && (
+                      <p className="text-gray-500 italic text-xs">
+                        Customer has not added contact details yet. Use
+                        the chat to coordinate.
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3">
+                    Contact released {formatDate(job.contact_released_at)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-semibold mb-2">Customer</h2>
+                  <p className="text-sm">{customer.display_name}</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Full contact info will be shared once your bid is
+                    accepted.
+                  </p>
+                </>
+              )}
             </Card>
           )}
         </div>

@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JUNK_TYPES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { TrustBadges } from "@/components/providers/trust-badges";
+import { Phone, Mail } from "lucide-react";
 import {
   AcceptOfferButton,
   RejectOfferButton,
@@ -54,11 +56,16 @@ export default async function JobDetailPage({
     );
   }
 
-  // Load offers with provider info
+  // Load offers with provider info (expanded for trust badges + contact release)
   const { data: offersRaw } = await supabase
     .from("offers")
     .select(
-      "*, profiles!offers_provider_id_fkey(display_name, avg_rating, total_jobs_completed, is_verified)"
+      `*, profiles!offers_provider_id_fkey(
+        id, display_name, avg_rating, total_jobs_completed, is_verified,
+        id_verified, business_verified, insurance_verified,
+        same_day_available, disposal_practices, truck_size, junk_types,
+        business_phone, business_email
+      )`
     )
     .eq("job_id", job.id)
     .is("deleted_at", null)
@@ -70,14 +77,6 @@ export default async function JobDetailPage({
     const provider = Array.isArray(provRaw) ? provRaw[0] : provRaw;
     return { ...o, provider };
   });
-
-  // Load escrow
-  const { data: escrow } = await supabase
-    .from("escrow_payments")
-    .select("*")
-    .eq("job_id", job.id)
-    .is("deleted_at", null)
-    .maybeSingle();
 
   // Load confirmation
   const { data: confirmation } = await supabase
@@ -291,6 +290,26 @@ export default async function JobDetailPage({
                         </Badge>
                       </div>
 
+                      {/* Trust badges */}
+                      {provider && (
+                        <div className="mb-3">
+                          <TrustBadges
+                            data={{
+                              id_verified: provider.id_verified,
+                              business_verified: provider.business_verified,
+                              insurance_verified: provider.insurance_verified,
+                              avg_rating: provider.avg_rating,
+                              total_jobs_completed: provider.total_jobs_completed,
+                              same_day_available: provider.same_day_available,
+                              disposal_practices: provider.disposal_practices,
+                              truck_size: provider.truck_size,
+                              junk_types: provider.junk_types,
+                            }}
+                            maxBadges={4}
+                          />
+                        </div>
+                      )}
+
                       <p className="text-2xl font-bold text-green-600 mb-2">
                         {formatCurrency(offer.price_cents)}
                       </p>
@@ -360,28 +379,51 @@ export default async function JobDetailPage({
             </Card>
           )}
 
-          {/* Escrow Status */}
-          {escrow && (
+          {/* Contact Info — released after offer accepted */}
+          {job.contact_released_at && acceptedOffer?.provider && (
             <Card>
-              <h2 className="font-semibold mb-4">Escrow Payment</h2>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-500">Amount</p>
-                  <p className="text-xl font-bold mt-1">
-                    {formatCurrency(escrow.amount_cents)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <Badge
-                    variant={
-                      escrow.status === "succeeded" ? "success" : "default"
-                    }
-                  >
-                    {escrow.status}
-                  </Badge>
-                </div>
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <Phone className="h-4 w-4 text-green-600" />
+                Provider Contact
+              </h2>
+              <div className="space-y-3 text-sm">
+                <p className="font-medium">
+                  {acceptedOffer.provider.display_name}
+                </p>
+                {acceptedOffer.provider.business_phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 text-gray-400" />
+                    <a
+                      href={`tel:${acceptedOffer.provider.business_phone}`}
+                      className="text-green-700 hover:underline"
+                    >
+                      {acceptedOffer.provider.business_phone}
+                    </a>
+                  </div>
+                )}
+                {acceptedOffer.provider.business_email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 text-gray-400" />
+                    <a
+                      href={`mailto:${acceptedOffer.provider.business_email}`}
+                      className="text-green-700 hover:underline"
+                    >
+                      {acceptedOffer.provider.business_email}
+                    </a>
+                  </div>
+                )}
+                {!acceptedOffer.provider.business_phone &&
+                  !acceptedOffer.provider.business_email && (
+                    <p className="text-gray-500 italic">
+                      Provider has not added contact details yet. Use the
+                      chat to coordinate.
+                    </p>
+                  )}
               </div>
+              <p className="text-xs text-gray-400 mt-3">
+                Contact info released{" "}
+                {formatDate(job.contact_released_at)}
+              </p>
             </Card>
           )}
 
