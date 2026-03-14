@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency, timeAgo } from "@/lib/utils";
+import { SubscriptionCard } from "@/components/providers/subscription-card";
 import Link from "next/link";
 
 export default async function ProviderDashboard() {
@@ -73,6 +74,11 @@ export default async function ProviderDashboard() {
             {formatCurrency(totalEarnings)}
           </div>
         </Card>
+      </div>
+
+      {/* Subscription & Quota */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <SubscriptionCard />
       </div>
 
       {activeJobs && activeJobs.length > 0 ? (

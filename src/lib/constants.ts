@@ -59,6 +59,13 @@ export const SUBSCRIPTION_TIERS: Record<
   },
 };
 
+// ── Stripe price IDs (set in .env) ──────────────────────────
+export const STRIPE_PRICE_IDS: Record<string, string | undefined> = {
+  starter: process.env.STRIPE_PRICE_STARTER,
+  growth: process.env.STRIPE_PRICE_GROWTH,
+  dominator: process.env.STRIPE_PRICE_DOMINATOR,
+};
+
 /** Legacy compat — keep for any code still referencing BID_LIMITS */
 export const BID_LIMITS = {
   unverified: 3,

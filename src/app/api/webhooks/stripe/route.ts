@@ -1,7 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { constructWebhookEvent } from "@/lib/stripe";
+import { STRIPE_PRICE_IDS } from "@/lib/constants";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+
+/**
+ * Resolve tier name from a Stripe price ID by matching against env config.
+ * Returns "starter" | "growth" | "dominator" or "starter" as fallback.
+ */
+function tierFromPriceId(priceId: string): string {
+  for (const [tier, id] of Object.entries(STRIPE_PRICE_IDS)) {
+    if (id && id === priceId) return tier;
+  }
+  return "starter"; // safe fallback
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -63,7 +75,7 @@ export async function POST(request: NextRequest) {
 
         const { data: profile } = await admin
           .from("profiles")
-          .select("id")
+          .select("id, monthly_quotes_reset_at")
           .eq("subscription_stripe_customer_id", customerId)
           .single();
 
@@ -71,14 +83,40 @@ export async function POST(request: NextRequest) {
           const isActive =
             subscription.status === "active" || subscription.status === "trialing";
 
+          // Determine tier from Stripe price
+          const priceId = subscription.items?.data?.[0]?.price?.id;
+          const tier = priceId ? tierFromPriceId(priceId) : undefined;
+
+          // Calculate period start for quota reset
+          const periodStart = subscription.current_period_start
+            ? new Date(subscription.current_period_start * 1000).toISOString()
+            : null;
+
+          // Reset monthly quota if the billing period rolled over
+          const shouldResetQuota =
+            periodStart &&
+            (!profile.monthly_quotes_reset_at ||
+              periodStart > profile.monthly_quotes_reset_at);
+
+          const updatePayload: Record<string, unknown> = {
+            subscription_active: isActive,
+            subscription_ends_at: subscription.current_period_end
+              ? new Date(subscription.current_period_end * 1000).toISOString()
+              : null,
+          };
+
+          if (tier) {
+            updatePayload.subscription_tier = tier;
+          }
+
+          if (shouldResetQuota) {
+            updatePayload.monthly_quotes_used = 0;
+            updatePayload.monthly_quotes_reset_at = periodStart;
+          }
+
           await admin
             .from("profiles")
-            .update({
-              subscription_active: isActive,
-              subscription_ends_at: subscription.current_period_end
-                ? new Date(subscription.current_period_end * 1000).toISOString()
-                : null,
-            })
+            .update(updatePayload)
             .eq("id", profile.id);
         }
         break;
@@ -99,6 +137,7 @@ export async function POST(request: NextRequest) {
             .from("profiles")
             .update({
               subscription_active: false,
+              subscription_tier: "free",
             })
             .eq("id", profile.id);
         }

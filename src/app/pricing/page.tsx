@@ -11,6 +11,7 @@ import {
   Truck,
   ChevronDown,
 } from "lucide-react";
+import { CheckoutButton } from "@/components/providers/checkout-button";
 
 /* ------------------------------------------------------------------ */
 /*  DATA                                                                */
@@ -264,17 +265,11 @@ function PricingCards() {
                   ))}
                 </ul>
 
-                <Link
-                  href="/signup"
-                  className={`w-full inline-flex items-center justify-center px-6 py-3 rounded-lg font-bold text-base transition-colors ${
-                    plan.highlighted
-                      ? "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-600/20"
-                      : "bg-gray-900 text-white hover:bg-gray-800"
-                  }`}
-                >
-                  {plan.cta}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+                <CheckoutButton
+                  tier={plan.tier}
+                  label={plan.cta}
+                  highlighted={plan.highlighted}
+                />
               </div>
             );
           })}
