@@ -282,6 +282,16 @@ export function CustomerChatThread({
     <Card>
       <h2 className="font-semibold text-lg mb-4">Messages</h2>
 
+      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <p className="text-xs text-amber-800 font-medium">
+          All communication must stay on BidForJunk. Sharing contact
+          information (phone, email, social media) is prohibited. Any
+          transactions conducted outside the platform are at your sole
+          risk and not covered by our escrow protection or dispute
+          resolution.
+        </p>
+      </div>
+
       {messages.length > 0 ? (
         <div
           ref={scrollRef}

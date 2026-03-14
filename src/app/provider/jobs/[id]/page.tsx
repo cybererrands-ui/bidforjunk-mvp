@@ -134,6 +134,34 @@ export default function ProviderJobDetailPage({
     loadData();
   }, [loadData]);
 
+  // Real-time subscription for new messages
+  useEffect(() => {
+    const channel = supabase
+      .channel(`provider-messages:${params.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `job_id=eq.${params.id}`,
+        },
+        async () => {
+          try {
+            const msgs = await getMessages(params.id);
+            setMessages((msgs as any as Message[]) || []);
+          } catch {
+            // ignore
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [params.id, supabase]);
+
   const myOffers = profile
     ? offers.filter((o) => o.provider_id === profile.id)
     : [];
@@ -397,6 +425,16 @@ export default function ProviderJobDetailPage({
           {/* Chat / Messages thread */}
           <Card>
             <h2 className="font-semibold text-lg mb-4">Messages</h2>
+
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs text-amber-800 font-medium">
+                All communication must stay on BidForJunk. Sharing contact
+                information (phone, email, social media) is prohibited. Any
+                transactions conducted outside the platform are at the
+                customer&apos;s sole risk and not covered by our escrow
+                protection or dispute resolution.
+              </p>
+            </div>
 
             {messages.length > 0 ? (
               <div className="space-y-3 max-h-96 overflow-y-auto mb-4">
