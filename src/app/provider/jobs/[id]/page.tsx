@@ -162,6 +162,20 @@ export default function ProviderJobDetailPage({
     };
   }, [params.id, supabase]);
 
+  // Polling fallback — ensures real-time feel even if Supabase
+  // Realtime publication is not yet enabled on the messages table
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const msgs = await getMessages(params.id);
+        setMessages((msgs as any as Message[]) || []);
+      } catch {
+        // ignore
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [params.id]);
+
   const myOffers = profile
     ? offers.filter((o) => o.provider_id === profile.id)
     : [];

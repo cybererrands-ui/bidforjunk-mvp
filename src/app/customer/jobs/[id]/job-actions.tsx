@@ -231,7 +231,6 @@ export function CustomerChatThread({
           filter: `job_id=eq.${jobId}`,
         },
         () => {
-          // Refetch all messages on new insert to get sender info
           loadMessages();
         }
       )
@@ -241,6 +240,15 @@ export function CustomerChatThread({
       supabase.removeChannel(channel);
     };
   }, [jobId, supabase, loadMessages]);
+
+  // Polling fallback — ensures real-time feel even if Supabase
+  // Realtime publication is not yet enabled on the messages table
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadMessages();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [loadMessages]);
 
   // Auto-scroll to bottom
   useEffect(() => {
