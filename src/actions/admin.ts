@@ -58,6 +58,131 @@ export async function reviewVerification(
   return { status };
 }
 
+// ── Granular verification actions (ID / Business / Insurance) ───────
+
+export type VerificationCategory = "id" | "business" | "insurance";
+
+export async function reviewProviderCategory(
+  providerId: string,
+  category: VerificationCategory,
+  approved: boolean,
+  rejectionNote?: string
+) {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("Not authenticated");
+
+  const { data: adminProfile } = await supabase
+    .from("profiles")
+    .select("id, role")
+    .eq("user_id", userData.user.id)
+    .single();
+
+  if (!adminProfile || adminProfile.role !== "admin") {
+    throw new Error("Only admins can review verifications");
+  }
+
+  const now = new Date().toISOString();
+  const update: Record<string, unknown> = {};
+
+  switch (category) {
+    case "id":
+      update.id_verified = approved;
+      update.id_verified_at = approved ? now : null;
+      update.id_rejection_note = !approved ? (rejectionNote || null) : null;
+      break;
+    case "business":
+      update.business_verified = approved;
+      update.business_verified_at = approved ? now : null;
+      update.business_rejection_note = !approved ? (rejectionNote || null) : null;
+      break;
+    case "insurance":
+      update.insurance_verified = approved;
+      update.insurance_verified_at = approved ? now : null;
+      update.insurance_rejection_note = !approved ? (rejectionNote || null) : null;
+      // Check insurance expiry
+      if (approved) {
+        update.insurance_expired = false;
+      }
+      break;
+  }
+
+  const { error } = await admin
+    .from("profiles")
+    .update(update)
+    .eq("id", providerId);
+
+  if (error) throw error;
+
+  // Check if all three are now approved — set master is_verified
+  const { data: provider } = await admin
+    .from("profiles")
+    .select("id_verified, business_verified, insurance_verified")
+    .eq("id", providerId)
+    .single();
+
+  if (provider) {
+    const allVerified =
+      provider.id_verified && provider.business_verified && provider.insurance_verified;
+
+    await admin
+      .from("profiles")
+      .update({
+        is_verified: allVerified,
+        verified_at: allVerified ? now : null,
+      })
+      .eq("id", providerId);
+  }
+
+  revalidatePath("/admin/verifications");
+  return { category, approved };
+}
+
+/** Get all providers with their verification details for admin review */
+export async function getProvidersForVerification() {
+  const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("Not authenticated");
+
+  const { data: adminProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .single();
+
+  if (!adminProfile || adminProfile.role !== "admin") {
+    throw new Error("Only admins can view verifications");
+  }
+
+  // Fetch all providers who have submitted at least one verification document
+  const { data: providers } = await supabase
+    .from("profiles")
+    .select(`
+      id, display_name, email, avatar_url, phone_number, created_at,
+      is_verified, is_suspended,
+      trial_ends_at, subscription_active, subscription_tier,
+      legal_full_name, date_of_birth, id_type, id_expiry_date, id_document_url,
+      id_verified, id_verified_at, id_rejection_note,
+      legal_business_name, operating_name, business_registration_number,
+      province_of_registration, business_type, business_address, business_phone,
+      business_email, business_website,
+      business_verified, business_verified_at, business_rejection_note,
+      insurer_name, insurance_policy_number, insurance_coverage_type,
+      insurance_coverage_amount, insurance_effective_date, insurance_expiry_date,
+      insurance_certificate_url,
+      insurance_verified, insurance_verified_at, insurance_rejection_note,
+      insurance_expired,
+      truck_size, crew_size, same_day_available, service_areas
+    `)
+    .eq("role", "provider")
+    .order("created_at", { ascending: false });
+
+  return providers || [];
+}
+
 export async function suspendUser(userId: string, reason: string) {
   const supabase = await createClient();
   const admin = createAdminClient();

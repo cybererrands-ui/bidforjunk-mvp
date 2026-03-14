@@ -6,10 +6,14 @@ import {
   BID_LIMIT_PERIOD_DAYS,
   MAX_NEGOTIATION_TURNS,
   OFFER_EXPIRY_HOURS,
+  SUBSCRIPTION_TIERS,
+  getQuoteCap,
+  type SubscriptionTier,
 } from "@/lib/constants";
+import { checkProviderVisibility } from "@/lib/provider-visibility";
 import { sendNewOfferAlert, sendOfferAccepted } from "@/lib/resend";
 import { revalidatePath } from "next/cache";
-import { subDays } from "date-fns";
+import { subDays, subMonths } from "date-fns";
 
 function getExpiresAt(): string {
   return new Date(
@@ -22,20 +26,27 @@ export async function checkBidLimit(providerId: string, isSubscribed: boolean) {
 
   const { data: provider } = await supabase
     .from("profiles")
-    .select("is_verified")
+    .select("is_verified, subscription_tier, monthly_quotes_used, monthly_quotes_reset_at")
     .eq("id", providerId)
     .single();
 
   if (!provider) throw new Error("Provider not found");
 
-  const limit = isSubscribed
-    ? BID_LIMITS.subscribed
-    : provider.is_verified
-      ? BID_LIMITS.verified_free
-      : BID_LIMITS.unverified;
+  const tier = (provider.subscription_tier || "free") as SubscriptionTier;
+  const tierConfig = SUBSCRIPTION_TIERS[tier];
+  const limit = getQuoteCap(tier, provider.is_verified);
 
   if (limit === Infinity) return { canBid: true, remaining: Infinity };
 
+  // For paid tiers, use monthly tracking; for free tier, use weekly count
+  if (tier !== "free" && tierConfig.period === "month") {
+    // Monthly tracking via monthly_quotes_used field
+    const bidsUsed = provider.monthly_quotes_used || 0;
+    const remaining = Math.max(0, limit - bidsUsed);
+    return { canBid: remaining > 0, remaining, limit, period: "month" };
+  }
+
+  // Free tier: weekly rolling window
   const sevenDaysAgo = subDays(new Date(), BID_LIMIT_PERIOD_DAYS);
 
   const { count } = await supabase
@@ -48,7 +59,7 @@ export async function checkBidLimit(providerId: string, isSubscribed: boolean) {
   const bidsUsed = count || 0;
   const remaining = Math.max(0, limit - bidsUsed);
 
-  return { canBid: remaining > 0, remaining, limit };
+  return { canBid: remaining > 0, remaining, limit, period: "week" };
 }
 
 export async function submitOffer(
@@ -61,15 +72,43 @@ export async function submitOffer(
 
   const { data: provider } = await supabase
     .from("profiles")
-    .select("subscription_active, display_name")
+    .select(`
+      subscription_active, display_name, subscription_tier,
+      trial_ends_at, is_verified, is_suspended,
+      id_verified, business_verified, insurance_verified,
+      insurance_expired, insurance_expiry_date,
+      service_areas, monthly_quotes_used
+    `)
     .eq("id", providerId)
     .single();
 
   if (!provider) throw new Error("Provider not found");
 
+  // Check provider visibility before allowing bids
+  const visibility = checkProviderVisibility({
+    trial_ends_at: provider.trial_ends_at,
+    subscription_active: provider.subscription_active,
+    subscription_tier: provider.subscription_tier,
+    is_verified: provider.is_verified,
+    id_verified: provider.id_verified ?? false,
+    business_verified: provider.business_verified ?? false,
+    insurance_verified: provider.insurance_verified ?? false,
+    insurance_expired: provider.insurance_expired ?? false,
+    insurance_expiry_date: provider.insurance_expiry_date,
+    service_areas: provider.service_areas || [],
+    display_name: provider.display_name,
+    is_suspended: provider.is_suspended,
+  });
+
+  if (!visibility.visible) {
+    throw new Error(
+      `Your profile is not yet visible. ${visibility.reasons[0]}. Complete verification to start bidding.`
+    );
+  }
+
   const bidCheck = await checkBidLimit(providerId, provider.subscription_active);
   if (!bidCheck.canBid) {
-    throw new Error("Bid limit exceeded for this period");
+    throw new Error("Quote limit exceeded for this period. Upgrade your plan for more quotes.");
   }
 
   const { data: job } = await supabase
@@ -129,6 +168,15 @@ export async function submitOffer(
 
   if (jobStatus?.status === "open") {
     await supabase.from("jobs").update({ status: "negotiating" }).eq("id", jobId);
+  }
+
+  // Increment monthly quote usage for paid tiers
+  const tier = (provider.subscription_tier || "free") as SubscriptionTier;
+  if (tier !== "free") {
+    await supabase
+      .from("profiles")
+      .update({ monthly_quotes_used: (provider.monthly_quotes_used || 0) + 1 })
+      .eq("id", providerId);
   }
 
   revalidatePath(`/customer/jobs/${jobId}`);
@@ -291,6 +339,7 @@ export async function acceptOffer(offerId: string) {
       status: "locked",
       agreed_price_cents: offer.price_cents,
       final_offer_id: offerId,
+      contact_released_at: new Date().toISOString(),
     })
     .eq("id", offer.job_id);
 
