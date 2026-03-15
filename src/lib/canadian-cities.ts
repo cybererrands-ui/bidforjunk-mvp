@@ -1078,3 +1078,31 @@ export function getCitiesByProvince(province: string): CanadianCity[] {
 export function formatCityProvince(city: CanadianCity): string {
   return `${city.name}, ${city.province}`;
 }
+
+/**
+ * Normalize a service-area string to a canonical slug.
+ * First tries exact slug lookup in the city database;
+ * falls back to raw slugification so legacy free-text entries
+ * still produce a reasonable slug.
+ */
+export function normalizeServiceAreaSlug(area: string): string {
+  if (!area) return "";
+  const slug = area
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]/g, "");
+
+  // Check if the slug matches a canonical city
+  const canonical = getCityBySlug(slug);
+  if (canonical) return canonical.slug;
+
+  // Try matching by city name (case-insensitive) for legacy entries
+  const byName = CANADIAN_CITIES.find(
+    (c) => c.name.toLowerCase() === area.toLowerCase().trim()
+  );
+  if (byName) return byName.slug;
+
+  // Fallback: return the raw slug
+  return slug;
+}

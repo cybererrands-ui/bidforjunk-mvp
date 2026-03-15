@@ -3,7 +3,8 @@ import { requireProvider } from "@/components/layout/role-guard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JUNK_TYPES } from "@/lib/constants";
-import { timeAgo, slugifyCity } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
+import { normalizeServiceAreaSlug } from "@/lib/canadian-cities";
 import Link from "next/link";
 
 export default async function ProviderJobsPage() {
@@ -30,10 +31,13 @@ export default async function ProviderJobsPage() {
     .order("created_at", { ascending: false });
 
   if (profile?.service_areas && profile.service_areas.length > 0) {
-    query = query.in(
-      "location_city_slug",
-      profile.service_areas.map((c: string) => slugifyCity(c))
-    );
+    // Normalize service areas to canonical slugs for consistent matching
+    const slugs = (profile.service_areas as string[]).map((c: string) =>
+      normalizeServiceAreaSlug(c)
+    ).filter(Boolean);
+    if (slugs.length > 0) {
+      query = query.in("location_city_slug", slugs);
+    }
   }
 
   const { data: jobs, error: jobsError } = await query;

@@ -87,14 +87,12 @@ export function CityAutocomplete(props: CityAutocompleteProps) {
         search(query);
         return;
       }
-      // In multi mode, allow Enter to add free-text city
+      // In multi mode, Enter without dropdown open does nothing
+      // (users must select from the dropdown to ensure canonical city names)
       if (e.key === "Enter" && props.mode === "multi") {
         e.preventDefault();
-        const trimmed = query.trim();
-        if (trimmed && !props.value.includes(trimmed)) {
-          props.onChange([...props.value, trimmed]);
-          setQuery("");
-        }
+        // Re-open search if there's text — nudge user to pick from list
+        if (query.trim().length > 0) search(query);
         return;
       }
       return;
@@ -119,12 +117,6 @@ export function CityAutocomplete(props: CityAutocompleteProps) {
           selectCity(results[highlightIndex]);
         } else if (results.length > 0) {
           selectCity(results[0]);
-        } else if (props.mode === "multi") {
-          const trimmed = query.trim();
-          if (trimmed && !props.value.includes(trimmed)) {
-            props.onChange([...props.value, trimmed]);
-            setQuery("");
-          }
         }
         break;
       case "Escape":
@@ -236,10 +228,7 @@ export function CityAutocomplete(props: CityAutocompleteProps) {
             className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3"
           >
             <p className="text-sm text-gray-500">
-              No matching city found.{" "}
-              {props.mode === "multi" && (
-                <span>Press Enter to add &ldquo;{query.trim()}&rdquo; manually.</span>
-              )}
+              No matching city found. Try a different spelling or nearby city.
             </p>
           </div>
         )}

@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProvider } from "@/components/layout/role-guard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { JOB_STATUS_LABELS } from "@/lib/constants";
+import { JOB_STATUS_LABELS, JUNK_TYPES } from "@/lib/constants";
 import { formatCurrency, timeAgo } from "@/lib/utils";
+import { normalizeServiceAreaSlug } from "@/lib/canadian-cities";
 import { SubscriptionCard } from "@/components/providers/subscription-card";
 import Link from "next/link";
 
@@ -11,6 +12,14 @@ export default async function ProviderDashboard() {
   const user = await requireProvider();
   const supabase = await createClient();
 
+  /* ---- provider profile (for service-area filtering) ---- */
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("service_areas, junk_types")
+    .eq("id", user.id)
+    .single();
+
+  /* ---- offers the provider has already placed ---- */
   const { data: offers } = await supabase
     .from("offers")
     .select("*, jobs(*)")
@@ -36,6 +45,35 @@ export default async function ProviderDashboard() {
         arr.findIndex((j: any) => j?.id === job?.id) === idx
     );
 
+  /* ---- available jobs (open/negotiating, in provider's areas) ---- */
+  let availQuery = supabase
+    .from("jobs")
+    .select("*")
+    .in("status", ["open", "negotiating"])
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (profile?.service_areas && profile.service_areas.length > 0) {
+    const slugs = (profile.service_areas as string[])
+      .map((c: string) => normalizeServiceAreaSlug(c))
+      .filter(Boolean);
+    if (slugs.length > 0) {
+      availQuery = availQuery.in("location_city_slug", slugs);
+    }
+  }
+
+  const { data: availableJobsRaw } = await availQuery;
+
+  // Exclude jobs this provider already bid on
+  const myJobIds = new Set(
+    (offers || []).map((o: any) => o.job_id)
+  );
+  const availableJobs = (availableJobsRaw || []).filter(
+    (job: any) => !myJobIds.has(job.id)
+  );
+
+  /* ---- earnings ---- */
   const { data: earnings } = await supabase
     .from("jobs")
     .select("agreed_price_cents")
@@ -47,6 +85,9 @@ export default async function ProviderDashboard() {
 
   const totalEarnings =
     earnings?.reduce((sum, job) => sum + (job.agreed_price_cents || 0), 0) || 0;
+
+  const hasServiceAreas =
+    profile?.service_areas && (profile.service_areas as string[]).length > 0;
 
   return (
     <div className="space-y-8">
@@ -81,9 +122,73 @@ export default async function ProviderDashboard() {
         <SubscriptionCard />
       </div>
 
-      {activeJobs && activeJobs.length > 0 ? (
+      {/* ---- New Available Jobs ---- */}
+      {availableJobs.length > 0 ? (
         <Card>
-          <h2 className="font-semibold text-lg mb-4">Active Jobs</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-semibold text-lg">
+              New Jobs{hasServiceAreas ? " in Your Area" : ""}
+            </h2>
+            <Link
+              href="/provider/jobs"
+              className="text-green-600 hover:underline text-sm font-medium"
+            >
+              View all &rarr;
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {availableJobs.slice(0, 5).map((job: any) => (
+              <Link key={job.id} href={`/provider/jobs/${job.id}`}>
+                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-medium">{job.title}</h3>
+                    <Badge variant="info">New</Badge>
+                  </div>
+                  <p className="text-gray-600 text-sm mb-2">
+                    {job.location_city}, {job.location_state}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {job.junk_types?.map((type: string) => (
+                      <span
+                        key={type}
+                        className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full"
+                      >
+                        {JUNK_TYPES[type as keyof typeof JUNK_TYPES] || type}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {timeAgo(job.created_at)}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Card className="text-center py-8">
+          <p className="text-gray-600 mb-2">No new jobs available right now</p>
+          {!hasServiceAreas && (
+            <p className="text-sm text-gray-500 mb-4">
+              <Link
+                href="/provider/profile"
+                className="text-green-600 hover:underline"
+              >
+                Set your service areas
+              </Link>{" "}
+              to see jobs in your cities.
+            </p>
+          )}
+          <Link href="/provider/jobs" className="btn-primary">
+            Browse All Jobs
+          </Link>
+        </Card>
+      )}
+
+      {/* ---- Active Jobs (already bid on) ---- */}
+      {activeJobs && activeJobs.length > 0 && (
+        <Card>
+          <h2 className="font-semibold text-lg mb-4">Your Active Jobs</h2>
           <div className="space-y-4">
             {activeJobs.map(
               (job: any) =>
@@ -116,13 +221,6 @@ export default async function ProviderDashboard() {
                 )
             )}
           </div>
-        </Card>
-      ) : (
-        <Card className="text-center py-12">
-          <p className="text-gray-600 mb-4">No active jobs yet</p>
-          <Link href="/provider/jobs" className="btn-primary">
-            Browse Available Jobs
-          </Link>
         </Card>
       )}
     </div>
