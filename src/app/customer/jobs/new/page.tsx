@@ -53,11 +53,6 @@ export default function NewJobPage() {
 
       if (!profile) throw new Error("Profile not found");
 
-      // Validate city was selected from autocomplete
-      if (!formData.location_city.trim()) {
-        throw new Error("Please select a city from the dropdown");
-      }
-
       // Convert budget from dollars to cents
       const budgetDollars = parseFloat(formData.budget_dollars);
       if (isNaN(budgetDollars) || budgetDollars <= 0) {

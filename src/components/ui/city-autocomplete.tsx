@@ -65,6 +65,10 @@ export function CityAutocomplete(props: CityAutocompleteProps) {
     const val = e.target.value;
     setQuery(val);
     search(val);
+    // In single mode, always keep parent in sync with typed text
+    if (props.mode === "single") {
+      props.onChange(val, props.province || "");
+    }
   };
 
   const selectCity = (city: CanadianCity) => {
