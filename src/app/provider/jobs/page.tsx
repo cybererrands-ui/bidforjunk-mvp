@@ -62,6 +62,8 @@ export default async function ProviderJobsPage() {
     filteredJobs = filteredJobs.filter((job) => !myJobIds.has(job.id));
   }
 
+  const hasServiceAreas = profile?.service_areas && profile.service_areas.length > 0;
+
   return (
     <div className="space-y-8">
       <div>
@@ -70,6 +72,22 @@ export default async function ProviderJobsPage() {
           Browse and bid on junk removal jobs in your service areas
         </p>
       </div>
+
+      {!hasServiceAreas && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-amber-800 font-medium text-sm">
+            You haven&apos;t set any service areas yet. Jobs are filtered by
+            your service cities &mdash; without them you&apos;ll see all
+            available jobs but may miss targeted notifications.
+          </p>
+          <a
+            href="/provider/profile"
+            className="text-amber-900 underline text-sm font-semibold mt-1 inline-block"
+          >
+            Update your profile &rarr;
+          </a>
+        </div>
+      )}
 
       {filteredJobs.length > 0 ? (
         <div className="grid gap-6">
@@ -109,14 +127,18 @@ export default async function ProviderJobsPage() {
       ) : (
         <Card className="text-center py-12">
           <p className="text-gray-600 mb-2">
-            No jobs available in your service areas yet.
+            No jobs available{hasServiceAreas ? " in your service areas" : ""} yet.
           </p>
           <p className="text-sm text-gray-500">
-            New jobs in Hamilton are posted daily. Check back soon or make sure
-            your service areas and junk types are set in your{" "}
-            <a href="/provider/profile" className="text-green-600 hover:underline">
-              profile
-            </a>.
+            {hasServiceAreas
+              ? "New jobs are posted regularly. Check back soon!"
+              : "Set your service areas and junk types in your "}
+            {!hasServiceAreas && (
+              <a href="/provider/profile" className="text-green-600 hover:underline">
+                profile
+              </a>
+            )}
+            {!hasServiceAreas && " to see jobs in your cities."}
           </p>
         </Card>
       )}

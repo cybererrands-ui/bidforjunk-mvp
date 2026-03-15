@@ -87,7 +87,7 @@ export default function SignupPage() {
           Join BidForJunk
         </h1>
         <p className="text-center text-gray-500 text-sm mb-6">
-          Hamilton&apos;s junk removal marketplace
+          Canada&apos;s junk removal marketplace
         </p>
 
         {step === "role" ? (

@@ -81,7 +81,7 @@ const plans = [
 const roiPoints = [
   {
     stat: "$250\u2013$800+",
-    label: "Average junk removal job in Hamilton",
+    label: "Average junk removal job in Canada",
   },
   {
     stat: "1 job",
@@ -108,7 +108,7 @@ const objections = [
   },
   {
     q: "Why act now instead of later?",
-    a: "Early launch providers get a 30-day free trial (instead of the standard 7 days). Hamilton is our launch market and the first providers to build reviews and badges here will own the local results. Waiting means competing against established profiles.",
+    a: "Early launch providers get a 30-day free trial (instead of the standard 7 days). The first providers to build reviews and badges in their city will own the local results. Waiting means competing against established profiles.",
   },
 ];
 
@@ -143,7 +143,7 @@ function PricingHero() {
           Start Receiving Them.
         </h1>
         <p className="mt-6 text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-          Homeowners in Hamilton are posting junk removal jobs right now.
+          Homeowners across Canada are posting junk removal jobs right now.
           Get verified, show up first, and win the work — before your competition does.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500 font-medium">
@@ -373,7 +373,7 @@ function FinalCTA() {
     <section className="bg-green-600 py-20">
       <div className="max-w-3xl mx-auto px-6 text-center">
         <h2 className="text-3xl md:text-4xl font-extrabold text-white">
-          Hamilton Is Hiring. Are You Listed?
+          Homeowners Are Hiring. Are You Listed?
         </h2>
         <p className="mt-4 text-green-100 text-lg leading-relaxed max-w-xl mx-auto">
           Homeowners are posting junk removal jobs every day. The providers who

@@ -38,7 +38,7 @@ export default async function AdminDashboard() {
         <div>
           <h1 className="text-2xl font-bold">Admin Command Center</h1>
           <p className="text-gray-600 mt-1">
-            BidForJunk — Hamilton, ON &middot;{" "}
+            BidForJunk — Canada &middot;{" "}
             {new Date().toLocaleDateString("en-CA", {
               weekday: "long",
               year: "numeric",

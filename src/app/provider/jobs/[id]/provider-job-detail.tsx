@@ -208,6 +208,15 @@ export default function ProviderJobDetail({ jobId }: { jobId: string }) {
       setBidPrice("");
       setBidNotes("");
       await loadData();
+
+      // Now that the provider has a bid, RLS allows message access.
+      // Force an immediate message fetch so the chat appears instantly.
+      try {
+        const msgs = await getMessages(jobId);
+        setMessages((msgs as any as Message[]) || []);
+      } catch {
+        // First message fetch may still fail if RLS hasn't propagated
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

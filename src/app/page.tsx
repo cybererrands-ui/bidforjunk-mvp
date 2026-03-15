@@ -40,7 +40,7 @@ function Hero() {
       <div className="max-w-4xl mx-auto px-6 pt-16 pb-20 md:pt-24 md:pb-28 text-center">
         <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 text-sm font-semibold px-4 py-1.5 rounded-full mb-6">
           <MapPin className="h-4 w-4" />
-          Now Live in Hamilton, ON
+          Now Live Across Canada
         </div>
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
           Stop Overpaying for
@@ -358,7 +358,7 @@ function SocialProof() {
     <section className="bg-green-50 py-20 md:py-28">
       <div className="max-w-6xl mx-auto px-6">
         <h2 className="text-3xl md:text-4xl font-extrabold text-center text-gray-900">
-          Trusted by Homeowners Across Hamilton
+          Trusted by Homeowners Across Canada
         </h2>
 
         <div className="mt-14 grid md:grid-cols-3 gap-8">
@@ -429,7 +429,7 @@ function FinalCTA() {
         </div>
 
         <p className="mt-10 text-green-200 text-sm">
-          Serving Hamilton, ON &mdash; Expanding soon
+          Serving communities across Canada
         </p>
       </div>
     </section>
@@ -449,7 +449,7 @@ function Footer() {
               BidForJunk
             </span>
             <p className="mt-2 text-gray-400 text-sm">
-              Hamilton&apos;s junk removal marketplace.
+              Canada&apos;s junk removal marketplace.
               Verified providers. Competitive prices.
             </p>
           </div>

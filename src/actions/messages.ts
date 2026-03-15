@@ -42,6 +42,22 @@ export async function sendMessage(
 ) {
   const supabase = await createClient();
 
+  // Force session refresh so auth.uid() resolves correctly in RLS
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Not authenticated");
+
+  // Verify senderId belongs to authenticated user (prevent spoofing)
+  const { data: senderProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("id", senderId)
+    .single();
+  if (!senderProfile) throw new Error("Unauthorized sender");
+
   const trimmed = content.trim();
   if (!trimmed) throw new Error("Message content cannot be empty");
 
@@ -71,6 +87,13 @@ export async function sendMessage(
 
 export async function getMessages(jobId: string) {
   const supabase = await createClient();
+
+  // Force session refresh so auth.uid() resolves correctly in RLS
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Not authenticated");
 
   const { data: messages, error } = await supabase
     .from("messages")

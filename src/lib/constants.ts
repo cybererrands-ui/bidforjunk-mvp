@@ -93,8 +93,10 @@ export function getQuotaPeriod(tier: SubscriptionTier): string {
 export const MAX_NEGOTIATION_TURNS = 3; // Max 3 offer turns per side
 export const OFFER_EXPIRY_HOURS = 24; // Offers expire after 24 hours
 
-// Launch city (hardcoded for MVP)
+// Launch city — kept for backward compat but no longer used as defaults
+/** @deprecated Use CityAutocomplete instead of hardcoding a city */
 export const LAUNCH_CITY = "Hamilton";
+/** @deprecated */
 export const LAUNCH_STATE = "ON";
 export const LAUNCH_COUNTRY = "CA";
 
@@ -183,18 +185,21 @@ export const BUSINESS_TYPES = {
   partnership: "Partnership",
 } as const;
 
-// ── Canadian Provinces ──────────────────────────────────────
+// ── Canadian Provinces & Territories ─────────────────────────
 export const PROVINCES = {
-  ON: "Ontario",
-  BC: "British Columbia",
   AB: "Alberta",
-  QC: "Quebec",
+  BC: "British Columbia",
   MB: "Manitoba",
-  SK: "Saskatchewan",
-  NS: "Nova Scotia",
   NB: "New Brunswick",
   NL: "Newfoundland and Labrador",
+  NS: "Nova Scotia",
+  NT: "Northwest Territories",
+  NU: "Nunavut",
+  ON: "Ontario",
   PE: "Prince Edward Island",
+  QC: "Quebec",
+  SK: "Saskatchewan",
+  YT: "Yukon",
 } as const;
 
 // ── Payment Methods ─────────────────────────────────────────

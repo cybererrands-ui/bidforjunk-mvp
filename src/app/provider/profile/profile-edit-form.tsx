@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { updateProviderProfile } from "@/actions/providers";
 import { JUNK_TYPES, PAYMENT_METHODS } from "@/lib/constants";
 import { CheckCircle, Save, AlertTriangle } from "lucide-react";
@@ -42,8 +43,6 @@ export function ProfileEditForm({ profile }: ProfileEditFormProps) {
     business_email: (profile.business_email as string) || "",
     business_website: (profile.business_website as string) || "",
   });
-
-  const [newCity, setNewCity] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,24 +80,6 @@ export function ProfileEditForm({ profile }: ProfileEditFormProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const addCity = () => {
-    const trimmed = newCity.trim();
-    if (trimmed && !formData.service_areas.includes(trimmed)) {
-      setFormData({
-        ...formData,
-        service_areas: [...formData.service_areas, trimmed],
-      });
-      setNewCity("");
-    }
-  };
-
-  const removeCity = (city: string) => {
-    setFormData({
-      ...formData,
-      service_areas: formData.service_areas.filter((c) => c !== city),
-    });
   };
 
   const toggleJunkType = (type: string) => {
@@ -183,36 +164,14 @@ export function ProfileEditForm({ profile }: ProfileEditFormProps) {
       <Card>
         <div className="p-6 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900">Service Areas</h2>
-          <div className="flex gap-2">
-            <Input
-              value={newCity}
-              onChange={(e) => setNewCity(e.target.value)}
-              placeholder="Add a city (e.g., Hamilton)"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addCity();
-                }
-              }}
-            />
-            <Button type="button" onClick={addCity} variant="secondary">
-              Add
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {formData.service_areas.map((city) => (
-              <Badge key={city} variant="success">
-                {city}
-                <button
-                  type="button"
-                  onClick={() => removeCity(city)}
-                  className="ml-1 hover:text-red-600"
-                >
-                  &times;
-                </button>
-              </Badge>
-            ))}
-          </div>
+          <CityAutocomplete
+            mode="multi"
+            value={formData.service_areas}
+            onChange={(cities) =>
+              setFormData({ ...formData, service_areas: cities })
+            }
+            placeholder="Type a city name to add..."
+          />
         </div>
       </Card>
 

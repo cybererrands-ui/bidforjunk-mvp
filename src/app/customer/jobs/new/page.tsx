@@ -8,24 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { JUNK_TYPES, LAUNCH_CITY, LAUNCH_STATE, CURRENCY_SYMBOL } from "@/lib/constants";
+import { JUNK_TYPES, CURRENCY_SYMBOL, PROVINCES } from "@/lib/constants";
 import { createJob, uploadJobPhotos } from "@/actions/jobs";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 
-const CANADIAN_PROVINCES = [
-  { value: "AB", label: "Alberta" },
-  { value: "BC", label: "British Columbia" },
-  { value: "MB", label: "Manitoba" },
-  { value: "NB", label: "New Brunswick" },
-  { value: "NL", label: "Newfoundland and Labrador" },
-  { value: "NS", label: "Nova Scotia" },
-  { value: "NT", label: "Northwest Territories" },
-  { value: "NU", label: "Nunavut" },
-  { value: "ON", label: "Ontario" },
-  { value: "PE", label: "Prince Edward Island" },
-  { value: "QC", label: "Quebec" },
-  { value: "SK", label: "Saskatchewan" },
-  { value: "YT", label: "Yukon" },
-];
+const CANADIAN_PROVINCES = Object.entries(PROVINCES).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 export default function NewJobPage() {
   const router = useRouter();
@@ -37,8 +27,8 @@ export default function NewJobPage() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    location_city: LAUNCH_CITY,
-    location_state: LAUNCH_STATE,
+    location_city: "",
+    location_state: "",
     location_address: "",
     junk_types: [] as string[],
     estimated_volume: "",
@@ -197,16 +187,19 @@ export default function NewJobPage() {
             placeholder="e.g., Weekday mornings, ASAP, or any specific date"
           />
 
-          <Input
+          <CityAutocomplete
+            mode="single"
             label="City"
             value={formData.location_city}
-            onChange={(e) =>
+            province={formData.location_state}
+            onChange={(city, province) =>
               setFormData((prev) => ({
                 ...prev,
-                location_city: e.target.value,
+                location_city: city,
+                location_state: province,
               }))
             }
-            placeholder="e.g., Hamilton"
+            placeholder="Start typing your city..."
             required
           />
 

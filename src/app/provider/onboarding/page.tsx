@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import {
   JUNK_TYPES,
   ID_TYPES,
@@ -348,38 +349,18 @@ export default function ProviderOnboardingPage() {
               Service Details
             </h2>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Service Cities
-              </label>
-              <div className="flex gap-2 mb-3">
-                <Input
-                  placeholder="Add a city (press Enter)"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const input = e.currentTarget;
-                      handleAddCity(input.value);
-                      input.value = "";
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {serviceData.service_areas.map((city) => (
-                  <Badge key={city} variant="info">
-                    {city}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCity(city)}
-                      className="ml-2 hover:text-red-600"
-                    >
-                      &times;
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            <CityAutocomplete
+              mode="multi"
+              label="Service Cities"
+              value={serviceData.service_areas}
+              onChange={(cities) =>
+                setServiceData((prev) => ({
+                  ...prev,
+                  service_areas: cities,
+                }))
+              }
+              placeholder="Type a city name to add..."
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
