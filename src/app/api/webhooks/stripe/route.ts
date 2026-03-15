@@ -31,43 +31,6 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
 
     switch (event.type) {
-      case "payment_intent.succeeded": {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        const jobId = paymentIntent.metadata?.jobId;
-
-        if (jobId) {
-          await admin
-            .from("escrow_payments")
-            .update({ status: "succeeded" })
-            .eq("stripe_payment_intent_id", paymentIntent.id);
-        }
-        break;
-      }
-
-      case "payment_intent.payment_failed": {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        const jobId = paymentIntent.metadata?.jobId;
-
-        if (jobId) {
-          await admin
-            .from("escrow_payments")
-            .update({ status: "failed" })
-            .eq("stripe_payment_intent_id", paymentIntent.id);
-        }
-        break;
-      }
-
-      case "charge.refunded": {
-        const charge = event.data.object as Stripe.Charge;
-        if (charge.payment_intent) {
-          await admin
-            .from("escrow_payments")
-            .update({ status: "refunded" })
-            .eq("stripe_payment_intent_id", charge.payment_intent as string);
-        }
-        break;
-      }
-
       case "customer.subscription.updated":
       case "customer.subscription.created": {
         const subscription = event.data.object as Stripe.Subscription;

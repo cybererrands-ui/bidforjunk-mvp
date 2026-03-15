@@ -94,8 +94,6 @@ export default async function AdminJobsPage() {
                   <div className="flex gap-2">
                     <form action={async () => {
                       "use server";
-                      const { releaseEscrow } = await import("@/actions/escrow");
-                      await releaseEscrow(jobData.id);
                       const { createClient: createServerClient } = await import("@/lib/supabase/server");
                       const sb = await createServerClient();
                       await sb.from("jobs").update({ status: "released" }).eq("id", jobData.id);
@@ -103,13 +101,11 @@ export default async function AdminJobsPage() {
                       revalidatePath("/admin/jobs");
                     }}>
                       <button type="submit" className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
-                        Release Escrow
+                        Release Job
                       </button>
                     </form>
                     <form action={async () => {
                       "use server";
-                      const { refundEscrowPayment } = await import("@/actions/escrow");
-                      await refundEscrowPayment(jobData.id);
                       const { createClient: createServerClient } = await import("@/lib/supabase/server");
                       const sb = await createServerClient();
                       await sb.from("jobs").update({ status: "cancelled" }).eq("id", jobData.id);

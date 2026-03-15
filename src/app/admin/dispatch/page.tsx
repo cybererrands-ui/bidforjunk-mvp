@@ -11,7 +11,7 @@ export default async function AdminDispatchPage() {
 
   // Fetch jobs that need dispatching or are in progress
   const dispatchStatuses: JobStatus[] = [
-    "escrow_authorized",
+    "accepted",
     "ready_for_dispatch",
     "dispatched",
     "in_progress",

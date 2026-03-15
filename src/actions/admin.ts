@@ -285,14 +285,7 @@ export async function getAdminMetrics() {
     .select("*", { count: "exact", head: true })
     .eq("status", "open");
 
-  const { data: escrowData } = await supabase
-    .from("escrow_payments")
-    .select("amount_cents")
-    .is("deleted_at", null);
-
-  const totalEscrow = escrowData?.reduce((sum: number, e) => sum + e.amount_cents, 0) || 0;
-
-  return { totalUsers, totalJobs, activeJobs, pendingVerifications, openDisputes, totalEscrow };
+  return { totalUsers, totalJobs, activeJobs, pendingVerifications, openDisputes };
 }
 
 /** Comprehensive dashboard data for the admin command center */
@@ -331,24 +324,15 @@ export async function getAdminDashboardData() {
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "customer"),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "provider"),
     supabase.from("jobs").select("*", { count: "exact", head: true }).is("deleted_at", null),
-    supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["open", "negotiating", "locked", "escrow_authorized", "ready_for_dispatch", "dispatched", "in_progress"]),
+    supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["open", "negotiating", "locked", "accepted", "ready_for_dispatch", "dispatched", "in_progress"]),
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "released"),
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "cancelled"),
     supabase.from("provider_verifications").select("*", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("disputes").select("*", { count: "exact", head: true }).eq("status", "open"),
-    supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["escrow_authorized", "ready_for_dispatch"]),
+    supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["accepted", "ready_for_dispatch"]),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "provider").eq("subscription_active", false).not("trial_ends_at", "is", null),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "provider").eq("subscription_active", true),
   ]);
-
-  // --- Escrow totals ---
-  const [{ data: escrowHeld }, { data: escrowReleased }] = await Promise.all([
-    supabase.from("escrow_payments").select("amount_cents").in("status", ["requires_capture", "processing"]).is("deleted_at", null),
-    supabase.from("escrow_payments").select("amount_cents").eq("status", "succeeded").is("deleted_at", null),
-  ]);
-
-  const totalEscrowHeld = escrowHeld?.reduce((s: number, e) => s + e.amount_cents, 0) || 0;
-  const totalEscrowReleased = escrowReleased?.reduce((s: number, e) => s + e.amount_cents, 0) || 0;
 
   // --- Pending admin release ---
   const { data: confirmations } = await supabase
@@ -422,8 +406,6 @@ export async function getAdminDashboardData() {
       activeJobs: activeJobs || 0,
       releasedJobs: releasedJobs || 0,
       cancelledJobs: cancelledJobs || 0,
-      totalEscrowHeld,
-      totalEscrowReleased,
     },
     actionItems: {
       pendingVerifications: pendingVerifications || 0,

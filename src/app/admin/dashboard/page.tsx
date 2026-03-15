@@ -20,7 +20,7 @@ export default async function AdminDashboard() {
     { key: "open", label: "Open" },
     { key: "negotiating", label: "Negotiating" },
     { key: "locked", label: "Locked" },
-    { key: "escrow_authorized", label: "Escrow Auth" },
+    { key: "accepted", label: "Accepted" },
     { key: "ready_for_dispatch", label: "Ready" },
     { key: "dispatched", label: "Dispatched" },
     { key: "in_progress", label: "In Progress" },
@@ -107,14 +107,14 @@ export default async function AdminDashboard() {
           <KpiCard label="Providers" value={kpi.totalProviders} />
           <KpiCard label="Total Jobs" value={kpi.totalJobs} />
           <KpiCard
-            label="Escrow Held"
-            value={formatCurrency(kpi.totalEscrowHeld)}
-            highlight="amber"
+            label="Paid Subscribers"
+            value={subscriptions.paid}
+            highlight="green"
           />
           <KpiCard
-            label="Revenue Released"
-            value={formatCurrency(kpi.totalEscrowReleased)}
-            highlight="green"
+            label="Trial Users"
+            value={subscriptions.trial}
+            highlight="amber"
           />
         </div>
       </div>

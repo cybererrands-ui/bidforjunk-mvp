@@ -54,18 +54,9 @@ export async function getAnalyticsData() {
       .select("*", { count: "exact", head: true })
       .eq("status", "released");
 
-    const { data: escrow } = await supabase
-      .from("escrow_payments")
-      .select("amount_cents")
-      .is("deleted_at", null);
-
-    const totalSpent =
-      escrow?.reduce((sum: number, e) => sum + (e.amount_cents || 0), 0) || 0;
-
     return {
       jobsPosted: jobsPosted || 0,
       jobsCompleted: jobsCompleted || 0,
-      totalSpent,
     };
   }
 

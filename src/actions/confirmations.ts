@@ -3,7 +3,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CONFIRMATION_DEADLINE_HOURS, SILENT_SIDE_RELEASE_HOURS } from "@/lib/constants";
-import { releaseEscrow } from "@/actions/escrow";
 import { revalidatePath } from "next/cache";
 import { addHours, differenceInHours } from "date-fns";
 
@@ -66,9 +65,9 @@ export async function confirmCompletion(
     .eq("job_id", jobId)
     .single();
 
-  // Both sides confirmed -- release escrow immediately
+  // Both sides confirmed -- mark job as released
   if (updatedConfirm?.provider_confirmed && updatedConfirm?.customer_confirmed) {
-    await releaseEscrow(jobId);
+    await admin.from("jobs").update({ status: "released" }).eq("id", jobId);
   }
 
   revalidatePath(`/customer/jobs/${jobId}`);
@@ -106,7 +105,7 @@ export async function checkSilentSideRelease(jobId: string): Promise<boolean> {
   return hoursSinceProviderConfirmed >= SILENT_SIDE_RELEASE_HOURS;
 }
 
-export async function autoReleaseEscrow(jobId: string) {
+export async function autoReleaseJob(jobId: string) {
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -123,7 +122,7 @@ export async function autoReleaseEscrow(jobId: string) {
   if (now < deadline) throw new Error("Deadline not reached");
 
   await admin.from("confirmations").update({ auto_released: true }).eq("job_id", jobId);
-  await releaseEscrow(jobId);
+  await admin.from("jobs").update({ status: "released" }).eq("id", jobId);
 
   revalidatePath(`/customer/jobs/${jobId}`);
   revalidatePath("/admin/jobs");

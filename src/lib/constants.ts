@@ -114,7 +114,7 @@ export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   open: "Open",
   negotiating: "Negotiating",
   locked: "Locked",
-  escrow_authorized: "Escrow Authorized",
+  accepted: "Accepted",
   ready_for_dispatch: "Ready for Dispatch",
   dispatched: "Dispatched",
   in_progress: "In Progress",
@@ -129,7 +129,7 @@ export const JOB_STATUS_COLORS: Record<JobStatus, string> = {
   open: "bg-blue-100 text-blue-800",
   negotiating: "bg-yellow-100 text-yellow-800",
   locked: "bg-orange-100 text-orange-800",
-  escrow_authorized: "bg-purple-100 text-purple-800",
+  accepted: "bg-purple-100 text-purple-800",
   ready_for_dispatch: "bg-indigo-100 text-indigo-800",
   dispatched: "bg-violet-100 text-violet-800",
   in_progress: "bg-cyan-100 text-cyan-800",
@@ -152,8 +152,6 @@ export const EMAIL_TEMPLATES = {
   dispatchNotification: "dispatchNotification",
   jobCompleteNotification: "jobCompleteNotification",
 };
-
-export const STRIPE_CAPTURE_METHOD = "manual" as const;
 
 // Priority score weights for dispatcher ordering
 export const PRIORITY_WEIGHTS = {

@@ -3,7 +3,7 @@ export type JobStatus =
   | "open"
   | "negotiating"
   | "locked"
-  | "escrow_authorized"
+  | "accepted"
   | "ready_for_dispatch"
   | "dispatched"
   | "in_progress"
@@ -690,8 +690,8 @@ export interface Database {
 export const VALID_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   open: ["negotiating", "cancelled"],
   negotiating: ["open", "locked", "cancelled"],
-  locked: ["escrow_authorized", "cancelled"],
-  escrow_authorized: ["ready_for_dispatch", "cancelled", "disputed"],
+  locked: ["accepted", "cancelled"],
+  accepted: ["ready_for_dispatch", "cancelled", "disputed"],
   ready_for_dispatch: ["dispatched", "cancelled"],
   dispatched: ["in_progress", "cancelled"],
   in_progress: ["completed", "disputed", "cancelled"],
