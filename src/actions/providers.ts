@@ -162,6 +162,61 @@ export async function completeOnboarding(
   return { completed: true };
 }
 
+export async function updateProviderProfile(
+  providerId: string,
+  data: {
+    display_name?: string | null;
+    bio?: string | null;
+    phone_number?: string | null;
+    service_areas?: string[];
+    junk_types?: string[];
+    hourly_rate?: number | null;
+    crew_size?: number | null;
+    truck_size?: string | null;
+    same_day_available?: boolean;
+    disposal_practices?: string | null;
+    hours_of_operation?: string | null;
+    years_in_business?: number | null;
+    payment_methods_accepted?: string[];
+    business_phone?: string | null;
+    business_email?: string | null;
+    business_website?: string | null;
+  }
+) {
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("Not authenticated");
+
+  // Verify this user owns this profile
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("id", providerId)
+    .single();
+
+  if (!profile || profile.user_id !== userData.user.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const updatePayload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      updatePayload[key] = value;
+    }
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(updatePayload)
+    .eq("id", providerId);
+
+  if (error) throw error;
+
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/profile");
+  return { updated: true };
+}
+
 export async function submitVerificationDocs(providerId: string, file: File) {
   const supabase = await createClient();
   const admin = createAdminClient();

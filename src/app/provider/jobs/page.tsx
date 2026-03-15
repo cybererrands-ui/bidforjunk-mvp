@@ -87,8 +87,15 @@ export default async function ProviderJobsPage() {
         </div>
       ) : (
         <Card className="text-center py-12">
-          <p className="text-gray-600">
-            No jobs available in your service areas yet
+          <p className="text-gray-600 mb-2">
+            No jobs available in your service areas yet.
+          </p>
+          <p className="text-sm text-gray-500">
+            New jobs in Hamilton are posted daily. Check back soon or make sure
+            your service areas and junk types are set in your{" "}
+            <a href="/provider/profile" className="text-green-600 hover:underline">
+              profile
+            </a>.
           </p>
         </Card>
       )}

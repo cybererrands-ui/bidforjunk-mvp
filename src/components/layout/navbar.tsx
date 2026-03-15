@@ -30,6 +30,7 @@ export function Navbar({ userRole, userName }: NavbarProps) {
     provider: [
       { label: "Dashboard", href: "/provider/dashboard" },
       { label: "Jobs", href: "/provider/jobs" },
+      { label: "Profile", href: "/provider/profile" },
     ],
     admin: [
       { label: "Dashboard", href: "/admin/dashboard" },

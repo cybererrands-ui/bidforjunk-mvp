@@ -194,7 +194,7 @@ export default function NewJobPage() {
                 preferred_time: e.target.value,
               }))
             }
-            placeholder="e.g., Weekday mornings or March 15, 2pm"
+            placeholder="e.g., Weekday mornings, ASAP, or any specific date"
           />
 
           <Input
