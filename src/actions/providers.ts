@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { JunkType } from "@/lib/types";
 import { revalidatePath } from "next/cache";
+import { getTrialDays } from "@/lib/constants";
 
 export async function completeOnboarding(
   providerId: string,
@@ -125,6 +126,21 @@ export async function completeOnboarding(
     updatePayload.payment_methods_accepted = data.payment_methods_accepted;
   if (data.fleet_photos_urls !== undefined)
     updatePayload.fleet_photos_urls = data.fleet_photos_urls;
+
+  // Set trial_ends_at if not already set (first-time onboarding)
+  const { data: currentProfile } = await admin
+    .from("profiles")
+    .select("trial_ends_at, created_at")
+    .eq("id", providerId)
+    .single();
+
+  if (currentProfile && !currentProfile.trial_ends_at) {
+    const signupDate = new Date(currentProfile.created_at);
+    const trialDays = getTrialDays(signupDate);
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + trialDays);
+    updatePayload.trial_ends_at = trialEnd.toISOString();
+  }
 
   const { error } = await admin
     .from("profiles")

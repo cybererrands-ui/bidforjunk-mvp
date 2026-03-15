@@ -47,13 +47,18 @@ export function checkProviderVisibility(
 ): VisibilityResult {
   const reasons: string[] = [];
 
-  // 1. Trial or subscription must be active
+  // 1. Trial or subscription must be active (free tier always allowed)
   const trialActive =
     provider.trial_ends_at !== null &&
     new Date(provider.trial_ends_at) > new Date();
   const subscriptionActive = provider.subscription_active === true;
+  const isFreeOrNullTier =
+    !provider.subscription_tier || provider.subscription_tier === "free";
 
-  if (!trialActive && !subscriptionActive) {
+  // Free-tier providers are always allowed to participate (with quota limits
+  // enforced separately in checkBidLimit). Paid tiers require either an
+  // active trial or active subscription.
+  if (!isFreeOrNullTier && !trialActive && !subscriptionActive) {
     reasons.push("No active trial or subscription");
   }
 

@@ -3,43 +3,64 @@ import { requireProvider } from "@/components/layout/role-guard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JUNK_TYPES } from "@/lib/constants";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, slugifyCity } from "@/lib/utils";
 import Link from "next/link";
 
 export default async function ProviderJobsPage() {
   const user = await requireProvider();
   const supabase = await createClient();
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("service_areas, junk_types")
     .eq("id", user.id)
     .single();
 
+  if (profileError) {
+    console.error("Failed to load provider profile:", profileError);
+  }
+
+  // Show jobs that are open (no bids yet) or negotiating (bids exist but
+  // customer hasn't accepted one — other providers can still compete)
   let query = supabase
     .from("jobs")
     .select("*")
-    .eq("status", "open")
+    .in("status", ["open", "negotiating"])
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (profile?.service_areas && profile.service_areas.length > 0) {
     query = query.in(
       "location_city_slug",
-      profile.service_areas.map((c: string) =>
-        c.toLowerCase().replace(/\s+/g, "-")
-      )
+      profile.service_areas.map((c: string) => slugifyCity(c))
     );
   }
 
-  const { data: jobs } = await query;
+  const { data: jobs, error: jobsError } = await query;
 
-  const filteredJobs = jobs?.filter((job) => {
+  if (jobsError) {
+    console.error("Failed to load jobs:", jobsError);
+  }
+
+  // Filter by junk types if provider has preferences set
+  let filteredJobs = (jobs || []).filter((job) => {
     if (!profile?.junk_types || profile.junk_types.length === 0) return true;
     return job.junk_types.some((type: string) =>
       (profile.junk_types as string[]).includes(type)
     );
   });
+
+  // Exclude jobs this provider already bid on (they'll see those in their dashboard)
+  const { data: myOffers } = await supabase
+    .from("offers")
+    .select("job_id")
+    .eq("provider_id", user.id)
+    .is("deleted_at", null);
+
+  if (myOffers && myOffers.length > 0) {
+    const myJobIds = new Set(myOffers.map((o) => o.job_id));
+    filteredJobs = filteredJobs.filter((job) => !myJobIds.has(job.id));
+  }
 
   return (
     <div className="space-y-8">
@@ -50,7 +71,7 @@ export default async function ProviderJobsPage() {
         </p>
       </div>
 
-      {filteredJobs && filteredJobs.length > 0 ? (
+      {filteredJobs.length > 0 ? (
         <div className="grid gap-6">
           {filteredJobs.map((job) => (
             <Link key={job.id} href={`/provider/jobs/${job.id}`}>

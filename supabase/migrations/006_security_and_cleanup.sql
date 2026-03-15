@@ -5,11 +5,13 @@
 -- 4. Clean up
 
 -- ── 1. Fix the handle_new_user trigger to block admin self-registration ──
+--    Also set trial_ends_at for providers (7 days default, 30 for launch cohort)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
   requested_role TEXT;
   safe_role user_role;
+  trial_end TIMESTAMP WITH TIME ZONE;
 BEGIN
   requested_role := COALESCE(new.raw_user_meta_data->>'role', 'customer');
 
@@ -21,12 +23,24 @@ BEGIN
     safe_role := requested_role::user_role;
   END IF;
 
-  INSERT INTO public.profiles (user_id, email, display_name, role)
+  -- Calculate trial end for providers
+  -- Launch cohort (before 2026-03-04) gets 30 days, rest get 7
+  IF safe_role = 'provider' THEN
+    IF NOW() < '2026-03-04'::timestamptz THEN
+      trial_end := NOW() + INTERVAL '30 days';
+    ELSE
+      trial_end := NOW() + INTERVAL '7 days';
+    END IF;
+  END IF;
+
+  INSERT INTO public.profiles (user_id, email, display_name, role, trial_ends_at, subscription_tier)
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'display_name', new.email),
-    safe_role
+    safe_role,
+    trial_end,
+    CASE WHEN safe_role = 'provider' THEN 'free' ELSE NULL END
   )
   ON CONFLICT (user_id) DO NOTHING;
   RETURN new;
@@ -90,7 +104,16 @@ BEGIN
   END IF;
 END $$;
 
--- ── 6. Add useful indexes for performance ──
+-- ── 6. Backfill trial_ends_at for existing providers who have NULL ──
+-- Give existing providers a 30-day trial from now (launch cohort benefit)
+UPDATE profiles
+SET
+  trial_ends_at = NOW() + INTERVAL '30 days',
+  subscription_tier = COALESCE(subscription_tier, 'free')
+WHERE role = 'provider'
+  AND trial_ends_at IS NULL;
+
+-- ── 7. Add useful indexes for performance ──
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_jobs_customer_id ON jobs(customer_id);
 CREATE INDEX IF NOT EXISTS idx_offers_job_id ON offers(job_id);
