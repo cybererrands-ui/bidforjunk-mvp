@@ -4,57 +4,26 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JUNK_TYPES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
-import { normalizeServiceAreaSlug } from "@/lib/canadian-cities";
 import Link from "next/link";
 
 export default async function ProviderJobsPage() {
   const user = await requireProvider();
   const supabase = await createClient();
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("service_areas, junk_types")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError) {
-    console.error("Failed to load provider profile:", profileError);
-  }
-
-  // Show jobs that are open (no bids yet) or negotiating (bids exist but
-  // customer hasn't accepted one — other providers can still compete)
-  let query = supabase
+  // All open/negotiating jobs — every hauler sees everything
+  const { data: jobs, error: jobsError } = await supabase
     .from("jobs")
     .select("*")
     .in("status", ["open", "negotiating"])
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
-  if (profile?.service_areas && profile.service_areas.length > 0) {
-    // Normalize service areas to canonical slugs for consistent matching
-    const slugs = (profile.service_areas as string[]).map((c: string) =>
-      normalizeServiceAreaSlug(c)
-    ).filter(Boolean);
-    if (slugs.length > 0) {
-      query = query.in("location_city_slug", slugs);
-    }
-  }
-
-  const { data: jobs, error: jobsError } = await query;
-
   if (jobsError) {
     console.error("Failed to load jobs:", jobsError);
   }
 
-  // Filter by junk types if provider has preferences set
-  let filteredJobs = (jobs || []).filter((job) => {
-    if (!profile?.junk_types || profile.junk_types.length === 0) return true;
-    return job.junk_types.some((type: string) =>
-      (profile.junk_types as string[]).includes(type)
-    );
-  });
-
   // Exclude jobs this provider already bid on (they'll see those in their dashboard)
+  let filteredJobs = jobs || [];
   const { data: myOffers } = await supabase
     .from("offers")
     .select("job_id")
@@ -66,32 +35,14 @@ export default async function ProviderJobsPage() {
     filteredJobs = filteredJobs.filter((job) => !myJobIds.has(job.id));
   }
 
-  const hasServiceAreas = profile?.service_areas && profile.service_areas.length > 0;
-
   return (
     <div className="space-y-8">
       <div>
         <h1>Available Jobs</h1>
         <p className="text-gray-600 mt-2">
-          Browse and bid on junk removal jobs in your service areas
+          Browse and bid on junk removal jobs across Canada
         </p>
       </div>
-
-      {!hasServiceAreas && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-amber-800 font-medium text-sm">
-            You haven&apos;t set any service areas yet. Jobs are filtered by
-            your service cities &mdash; without them you&apos;ll see all
-            available jobs but may miss targeted notifications.
-          </p>
-          <a
-            href="/provider/profile"
-            className="text-amber-900 underline text-sm font-semibold mt-1 inline-block"
-          >
-            Update your profile &rarr;
-          </a>
-        </div>
-      )}
 
       {filteredJobs.length > 0 ? (
         <div className="grid gap-6">
@@ -130,19 +81,9 @@ export default async function ProviderJobsPage() {
         </div>
       ) : (
         <Card className="text-center py-12">
-          <p className="text-gray-600 mb-2">
-            No jobs available{hasServiceAreas ? " in your service areas" : ""} yet.
-          </p>
+          <p className="text-gray-600 mb-2">No jobs available yet.</p>
           <p className="text-sm text-gray-500">
-            {hasServiceAreas
-              ? "New jobs are posted regularly. Check back soon!"
-              : "Set your service areas and junk types in your "}
-            {!hasServiceAreas && (
-              <a href="/provider/profile" className="text-green-600 hover:underline">
-                profile
-              </a>
-            )}
-            {!hasServiceAreas && " to see jobs in your cities."}
+            New jobs are posted regularly. Check back soon!
           </p>
         </Card>
       )}

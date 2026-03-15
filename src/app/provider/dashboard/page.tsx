@@ -4,20 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JUNK_TYPES } from "@/lib/constants";
 import { formatCurrency, timeAgo } from "@/lib/utils";
-import { normalizeServiceAreaSlug } from "@/lib/canadian-cities";
 import { SubscriptionCard } from "@/components/providers/subscription-card";
 import Link from "next/link";
 
 export default async function ProviderDashboard() {
   const user = await requireProvider();
   const supabase = await createClient();
-
-  /* ---- provider profile (for service-area filtering) ---- */
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("service_areas, junk_types")
-    .eq("id", user.id)
-    .single();
 
   /* ---- offers the provider has already placed ---- */
   const { data: offers } = await supabase
@@ -45,25 +37,14 @@ export default async function ProviderDashboard() {
         arr.findIndex((j: any) => j?.id === job?.id) === idx
     );
 
-  /* ---- available jobs (open/negotiating, in provider's areas) ---- */
-  let availQuery = supabase
+  /* ---- ALL available jobs (open/negotiating) — every hauler sees everything ---- */
+  const { data: availableJobsRaw, error: availError } = await supabase
     .from("jobs")
     .select("*")
     .in("status", ["open", "negotiating"])
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(10);
-
-  if (profile?.service_areas && profile.service_areas.length > 0) {
-    const slugs = (profile.service_areas as string[])
-      .map((c: string) => normalizeServiceAreaSlug(c))
-      .filter(Boolean);
-    if (slugs.length > 0) {
-      availQuery = availQuery.in("location_city_slug", slugs);
-    }
-  }
-
-  const { data: availableJobsRaw, error: availError } = await availQuery;
 
   if (availError) {
     console.error("Failed to load available jobs:", availError);
@@ -89,9 +70,6 @@ export default async function ProviderDashboard() {
 
   const totalEarnings =
     earnings?.reduce((sum, job) => sum + (job.agreed_price_cents || 0), 0) || 0;
-
-  const hasServiceAreas =
-    profile?.service_areas && (profile.service_areas as string[]).length > 0;
 
   return (
     <div className="space-y-8">
@@ -130,9 +108,7 @@ export default async function ProviderDashboard() {
       {availableJobs.length > 0 ? (
         <Card>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-semibold text-lg">
-              New Jobs{hasServiceAreas ? " in Your Area" : ""}
-            </h2>
+            <h2 className="font-semibold text-lg">New Available Jobs</h2>
             <Link
               href="/provider/jobs"
               className="text-green-600 hover:underline text-sm font-medium"
@@ -172,17 +148,9 @@ export default async function ProviderDashboard() {
       ) : (
         <Card className="text-center py-8">
           <p className="text-gray-600 mb-2">No new jobs available right now</p>
-          {!hasServiceAreas && (
-            <p className="text-sm text-gray-500 mb-4">
-              <Link
-                href="/provider/profile"
-                className="text-green-600 hover:underline"
-              >
-                Set your service areas
-              </Link>{" "}
-              to see jobs in your cities.
-            </p>
-          )}
+          <p className="text-sm text-gray-500 mb-4">
+            New jobs are posted regularly. Check back soon!
+          </p>
           <Link href="/provider/jobs" className="btn-primary">
             Browse All Jobs
           </Link>
