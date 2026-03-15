@@ -22,14 +22,27 @@ export async function createJob(
 ) {
   const supabase = await createClient();
 
+  // Verify auth session is active (required for RLS)
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Validate city is not empty (guard against autocomplete bypass)
+  if (!data.location_city || !data.location_city.trim()) {
+    throw new Error("City is required");
+  }
+
+  const citySlug = slugifyCity(data.location_city);
+
   const { data: job, error } = await supabase
     .from("jobs")
     .insert({
       customer_id: customerId,
       title: data.title,
       description: data.description,
-      location_city: data.location_city,
-      location_city_slug: slugifyCity(data.location_city),
+      location_city: data.location_city.trim(),
+      location_city_slug: citySlug,
       location_state: data.location_state,
       location_address: data.location_address,
       junk_types: data.junk_types,
@@ -46,6 +59,7 @@ export async function createJob(
 
   revalidatePath("/customer/dashboard");
   revalidatePath("/provider/jobs");
+  revalidatePath("/provider/dashboard");
   return job;
 }
 

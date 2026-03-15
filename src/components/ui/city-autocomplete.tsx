@@ -81,6 +81,37 @@ export function CityAutocomplete(props: CityAutocompleteProps) {
     setHighlightIndex(-1);
   };
 
+  // Auto-select best match when user leaves the input (single mode)
+  const handleBlur = useCallback(() => {
+    // Small delay to allow dropdown clicks to register first
+    setTimeout(() => {
+      if (props.mode !== "single") return;
+      const trimmed = query.trim();
+      if (!trimmed) {
+        // Input was cleared — reset the value
+        if (props.value) {
+          props.onChange("", "");
+        }
+        return;
+      }
+      // If the query already matches the selected value, nothing to do
+      if (trimmed === props.value) return;
+      // Try to find a matching city
+      const matches = searchCities(trimmed, 1);
+      if (matches.length > 0) {
+        const best = matches[0];
+        setQuery(best.name);
+        props.onChange(best.name, best.province);
+      } else {
+        // No match — reset to the previously selected value (or empty)
+        setQuery(props.value || "");
+      }
+      setIsOpen(false);
+      setHighlightIndex(-1);
+    }, 200);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, props.mode, props.mode === "single" ? props.value : null]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen) {
       if (e.key === "ArrowDown" && query.trim().length > 0) {
@@ -184,6 +215,7 @@ export function CityAutocomplete(props: CityAutocompleteProps) {
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
           onFocus={() => {
             if (query.trim().length > 0) search(query);
           }}

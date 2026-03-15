@@ -63,7 +63,11 @@ export default async function ProviderDashboard() {
     }
   }
 
-  const { data: availableJobsRaw } = await availQuery;
+  const { data: availableJobsRaw, error: availError } = await availQuery;
+
+  if (availError) {
+    console.error("Failed to load available jobs:", availError);
+  }
 
   // Exclude jobs this provider already bid on
   const myJobIds = new Set(
