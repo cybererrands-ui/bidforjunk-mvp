@@ -3,30 +3,35 @@ import { redirect } from "next/navigation";
 import { CurrentUser, UserRole } from "@/lib/types";
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return null;
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError || !userData.user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("user_id", userData.user.id)
-    .single();
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userData.user.id)
+      .single();
 
-  if (!profile) return null;
+    if (profileError || !profile) return null;
 
-  return {
-    id: profile.id,
-    user_id: profile.user_id,
-    email: profile.email,
-    display_name: profile.display_name,
-    role: profile.role as UserRole,
-    is_verified: profile.is_verified,
-    is_suspended: profile.is_suspended,
-    trial_ends_at: profile.trial_ends_at,
-    subscription_active: profile.subscription_active,
-  };
+    return {
+      id: profile.id,
+      user_id: profile.user_id,
+      email: profile.email,
+      display_name: profile.display_name,
+      role: profile.role as UserRole,
+      is_verified: profile.is_verified,
+      is_suspended: profile.is_suspended,
+      trial_ends_at: profile.trial_ends_at,
+      subscription_active: profile.subscription_active,
+    };
+  } catch (err) {
+    console.error("getCurrentUser failed:", err);
+    return null;
+  }
 }
 
 export async function requireAuth(): Promise<CurrentUser> {

@@ -25,15 +25,16 @@ export default async function JobDetailPage({
   // Auth check
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (authError || !user) redirect("/login");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id")
     .eq("user_id", user.id)
     .single();
-  if (!profile) redirect("/login");
+  if (profileError || !profile) redirect("/login");
 
   // Load job
   const { data: job, error: jobError } = await supabase
