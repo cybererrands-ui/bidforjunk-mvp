@@ -246,7 +246,7 @@ export function CustomerChatThread({
   useEffect(() => {
     const interval = setInterval(() => {
       loadMessages();
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [loadMessages]);
 

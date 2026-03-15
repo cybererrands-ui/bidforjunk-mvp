@@ -54,6 +54,16 @@ export default function ProviderJobDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
 
+  // These must be derived before any useEffect that references them.
+  // (They depend on state set by loadData, so on first render they are
+  // empty/false — the polling effect simply won't fire until data arrives.)
+  const myOffers = profile
+    ? offers.filter((o: any) => o.provider_id === profile.id)
+    : [];
+  const hasUserBid = myOffers.some((o: any) => o.kind === "bid");
+  const isAssignedToMe =
+    dispatch && profile && dispatch.provider_id === profile.id;
+
   const loadData = useCallback(async () => {
     try {
       // Get current user profile
@@ -120,13 +130,18 @@ export default function ProviderJobDetailPage({
 
       setConfirmation(confirmData);
 
-      // Fetch messages
-      try {
-        const msgs = await getMessages(params.id);
-        setMessages((msgs as any as Message[]) || []);
-      } catch {
-        // Messages may fail if none exist
+      // Fetch messages (only if user has an offer on this job — RLS requires it)
+      if (profileData) {
+        try {
+          const msgs = await getMessages(params.id);
+          setMessages((msgs as any as Message[]) || []);
+        } catch {
+          // Messages may fail if provider hasn't placed a bid yet (RLS blocks it)
+        }
       }
+    } catch (err) {
+      console.error("Failed to load job data:", err);
+      setError(err instanceof Error ? err.message : "Failed to load job data");
     } finally {
       setPageLoading(false);
     }
@@ -165,8 +180,10 @@ export default function ProviderJobDetailPage({
   }, [params.id, supabase]);
 
   // Polling fallback — ensures real-time feel even if Supabase
-  // Realtime publication is not yet enabled on the messages table
+  // Realtime publication is not yet enabled on the messages table.
+  // Only poll when the provider has a bid (RLS requires an offer to read messages).
   useEffect(() => {
+    if (!hasUserBid) return;
     const interval = setInterval(async () => {
       try {
         const msgs = await getMessages(params.id);
@@ -174,16 +191,9 @@ export default function ProviderJobDetailPage({
       } catch {
         // ignore
       }
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
-  }, [params.id]);
-
-  const myOffers = profile
-    ? offers.filter((o) => o.provider_id === profile.id)
-    : [];
-  const hasUserBid = myOffers.some((o) => o.kind === "bid");
-  const isAssignedToMe =
-    dispatch && profile && dispatch.provider_id === profile.id;
+  }, [params.id, hasUserBid]);
 
   const handleSubmitBid = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -442,64 +452,74 @@ export default function ProviderJobDetailPage({
           <Card>
             <h2 className="font-semibold text-lg mb-4">Messages</h2>
 
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs text-amber-800 font-medium">
-                Keep all communication on BidForJunk until a bid is
-                accepted. Once the customer accepts your offer, their
-                contact info will be shared with you. Any work arranged
-                outside the platform is at your sole risk and not covered
-                by our dispute resolution.
-              </p>
-            </div>
+            {hasUserBid ? (
+              <>
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-800 font-medium">
+                    Keep all communication on BidForJunk until a bid is
+                    accepted. Once the customer accepts your offer, their
+                    contact info will be shared with you. Any work arranged
+                    outside the platform is at your sole risk and not covered
+                    by our dispute resolution.
+                  </p>
+                </div>
 
-            {messages.length > 0 ? (
-              <div className="space-y-3 max-h-96 overflow-y-auto mb-4">
-                {messages.map((msg) => {
-                  const isMe = msg.sender_id === profile?.id;
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[75%] rounded-lg px-4 py-2 ${
-                          isMe
-                            ? "bg-brand-600 text-white"
-                            : "bg-gray-100 text-gray-900"
-                        }`}
-                      >
-                        <p className="text-xs font-medium mb-1 opacity-80">
-                          {msg.sender?.display_name ?? "Unknown"}
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {msg.content}
-                        </p>
-                        <p className="text-xs mt-1 opacity-60">
-                          {formatDate(msg.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                {messages.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto mb-4">
+                    {messages.map((msg) => {
+                      const isMe = msg.sender_id === profile?.id;
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[75%] rounded-lg px-4 py-2 ${
+                              isMe
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-100 text-gray-900"
+                            }`}
+                          >
+                            <p className="text-xs font-medium mb-1 opacity-80">
+                              {msg.sender?.display_name ?? "Unknown"}
+                            </p>
+                            <p className="text-sm whitespace-pre-wrap">
+                              {msg.content}
+                            </p>
+                            <p className="text-xs mt-1 opacity-60">
+                              {formatDate(msg.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm mb-4">
+                    No messages yet. Start the conversation!
+                  </p>
+                )}
+
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Type a message..."
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                  />
+                  <Button type="submit" loading={loading} size="sm">
+                    Send
+                  </Button>
+                </form>
+              </>
             ) : (
-              <p className="text-gray-500 text-sm mb-4">
-                No messages yet. Start the conversation!
-              </p>
+              <div className="text-center py-6">
+                <p className="text-gray-500 text-sm">
+                  Place a bid first to start chatting with the customer.
+                </p>
+              </div>
             )}
-
-            <form onSubmit={handleSendMessage} className="flex gap-2">
-              <input
-                type="text"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                placeholder="Type a message..."
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-              />
-              <Button type="submit" loading={loading} size="sm">
-                Send
-              </Button>
-            </form>
           </Card>
         </div>
 
@@ -558,8 +578,8 @@ export default function ProviderJobDetailPage({
             </Card>
           )}
 
-          {/* Bid form -- show only if job is open and provider hasn't bid */}
-          {!hasUserBid && job.status === "open" && (
+          {/* Bid form -- show if job is open or negotiating and provider hasn't bid yet */}
+          {!hasUserBid && (job.status === "open" || job.status === "negotiating") && (
             <Card>
               <h2 className="font-semibold mb-4">Place Your Bid</h2>
 
