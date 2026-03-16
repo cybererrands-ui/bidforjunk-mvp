@@ -276,6 +276,7 @@ export interface Database {
           agreed_price_cents: number | null;
           final_offer_id: string | null;
           contact_released_at: string | null;
+          agreement_accepted_at: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -298,6 +299,7 @@ export interface Database {
           agreed_price_cents?: number | null;
           final_offer_id?: string | null;
           contact_released_at?: string | null;
+          agreement_accepted_at?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -318,6 +320,7 @@ export interface Database {
           agreed_price_cents?: number | null;
           final_offer_id?: string | null;
           contact_released_at?: string | null;
+          agreement_accepted_at?: string | null;
           deleted_at?: string | null;
         };
       };

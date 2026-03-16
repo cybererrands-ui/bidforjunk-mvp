@@ -331,7 +331,7 @@ export async function acceptOffer(offerId: string) {
     .update({ status: "accepted", kind: "accept" })
     .eq("id", offerId);
 
-  // Lock the job and record agreement timestamp
+  // Lock the job and release contact
   const now = new Date().toISOString();
   await supabase
     .from("jobs")
@@ -340,9 +340,18 @@ export async function acceptOffer(offerId: string) {
       agreed_price_cents: offer.price_cents,
       final_offer_id: offerId,
       contact_released_at: now,
-      agreement_accepted_at: now,
     })
     .eq("id", offer.job_id);
+
+  // Record agreement timestamp (separate call — column added by migration 007)
+  try {
+    await supabase
+      .from("jobs")
+      .update({ agreement_accepted_at: now })
+      .eq("id", offer.job_id);
+  } catch {
+    // Column may not exist yet if migration 007 hasn't been run
+  }
 
   // Reject all other offers
   await supabase
