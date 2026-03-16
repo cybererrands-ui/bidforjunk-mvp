@@ -189,6 +189,13 @@ export async function submitCounterOffer(
 ) {
   const supabase = await createClient();
 
+  // Force session validation so auth.uid() resolves correctly in RLS
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Not authenticated");
+
   // Determine the sender's role context for this job
   const { data: job } = await supabase
     .from("jobs")
@@ -290,6 +297,9 @@ export async function submitCounterOffer(
 export async function expireOffer(offerId: string) {
   const supabase = await createClient();
 
+  // Force session validation so auth.uid() resolves correctly in RLS
+  await supabase.auth.getUser();
+
   const { data: offer, error: fetchError } = await supabase
     .from("offers")
     .select("id, job_id, status")
@@ -316,6 +326,13 @@ export async function expireOffer(offerId: string) {
 
 export async function acceptOffer(offerId: string) {
   const supabase = await createClient();
+
+  // Force session validation so auth.uid() resolves correctly in RLS
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Not authenticated");
 
   const { data: offer } = await supabase
     .from("offers")

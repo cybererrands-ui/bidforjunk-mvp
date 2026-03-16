@@ -65,6 +65,7 @@ export async function createJob(
 
 export async function cancelJob(jobId: string) {
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
   const { error } = await supabase
     .from("jobs")
@@ -114,6 +115,7 @@ export async function uploadJobPhotos(jobId: string, photos: File[]) {
 
 export async function transitionJobStatus(jobId: string, newStatus: JobStatus) {
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
   const { data: job } = await supabase
     .from("jobs")
