@@ -17,6 +17,7 @@ import { confirmCompletion } from "@/actions/confirmations";
 import { sendMessage, getMessages } from "@/actions/messages";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Phone, Mail, UserCheck } from "lucide-react";
+import { ServiceAgreement } from "@/components/jobs/service-agreement";
 
 interface Message {
   id: string;
@@ -578,6 +579,25 @@ export default function ProviderJobDetail({ jobId }: { jobId: string }) {
               <p className="text-3xl font-bold text-brand-600">
                 {formatCurrency(job.agreed_price_cents)}
               </p>
+            </Card>
+          )}
+
+          {/* Service Agreement */}
+          {job.agreed_price_cents && job.customer && (
+            <Card>
+              <h2 className="font-semibold mb-3">Service Agreement</h2>
+              <ServiceAgreement
+                customerName={job.customer.display_name}
+                providerName={profile?.display_name || "Provider"}
+                jobTitle={job.title}
+                jobDescription={job.description || ""}
+                jobCity={job.location_city || ""}
+                jobState={job.location_state || ""}
+                junkTypes={job.junk_types || []}
+                agreedPriceCents={job.agreed_price_cents}
+                agreementDate={job.contact_released_at || job.updated_at}
+                compact
+              />
             </Card>
           )}
 

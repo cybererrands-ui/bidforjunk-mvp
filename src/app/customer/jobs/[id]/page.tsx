@@ -7,6 +7,7 @@ import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JUNK_TYPES } from "@/lib/constant
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { TrustBadges } from "@/components/providers/trust-badges";
 import { Phone, Mail } from "lucide-react";
+import { ServiceAgreement } from "@/components/jobs/service-agreement";
 import {
   AcceptOfferButton,
   RejectOfferButton,
@@ -31,7 +32,7 @@ export default async function JobDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, display_name")
     .eq("user_id", user.id)
     .single();
   if (profileError || !profile) redirect("/login");
@@ -330,7 +331,17 @@ export default async function JobDetailPage({
                       {isActive &&
                         ["open", "negotiating"].includes(job.status) && (
                           <div className="flex gap-2 pt-2 border-t border-gray-100">
-                            <AcceptOfferButton offerId={offer.id} />
+                            <AcceptOfferButton
+                              offerId={offer.id}
+                              offerPriceCents={offer.price_cents}
+                              providerName={provider?.display_name || "Provider"}
+                              customerName={profile.display_name || "Customer"}
+                              jobTitle={job.title}
+                              jobDescription={job.description || ""}
+                              jobCity={job.location_city || ""}
+                              jobState={job.location_state || ""}
+                              junkTypes={(job.junk_types as string[]) || []}
+                            />
                             <RejectOfferButton offerId={offer.id} />
                           </div>
                         )}
@@ -347,29 +358,26 @@ export default async function JobDetailPage({
 
         {/* Sidebar - right col */}
         <div className="space-y-6">
-          {/* Price Summary */}
+          {/* Service Agreement */}
           {job.agreed_price_cents && (
             <Card>
-              <h2 className="font-semibold mb-4">Agreement</h2>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-500">Agreed Price</p>
-                  <p className="text-3xl font-bold text-green-600 mt-1">
-                    {formatCurrency(job.agreed_price_cents)}
-                  </p>
-                </div>
-                {acceptedOffer?.provider?.display_name && (
-                  <div>
-                    <p className="text-sm text-gray-500">Provider</p>
-                    <p className="font-medium mt-1">
-                      {acceptedOffer.provider.display_name}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
+              <h2 className="font-semibold mb-4">Service Agreement</h2>
+              <ServiceAgreement
+                customerName={profile.display_name || "Customer"}
+                providerName={acceptedOffer?.provider?.display_name || "Provider"}
+                jobTitle={job.title}
+                jobDescription={job.description || ""}
+                jobCity={job.location_city || ""}
+                jobState={job.location_state || ""}
+                junkTypes={(job.junk_types as string[]) || []}
+                agreedPriceCents={job.agreed_price_cents}
+                agreementDate={job.contact_released_at || job.updated_at}
+                compact={true}
+              />
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="flex justify-between items-center">
                   <span
-                    className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-medium ${statusColor}`}
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}
                   >
                     {JOB_STATUS_LABELS[
                       job.status as keyof typeof JOB_STATUS_LABELS

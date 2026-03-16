@@ -12,7 +12,7 @@ import {
 } from "@/lib/constants";
 // TODO: Re-enable when admin verification UI is built
 // import { checkProviderVisibility } from "@/lib/provider-visibility";
-import { sendNewOfferAlert, sendOfferAccepted } from "@/lib/resend";
+import { sendNewOfferAlert, sendServiceAgreement } from "@/lib/resend";
 import { revalidatePath } from "next/cache";
 import { subDays, subMonths } from "date-fns";
 
@@ -325,55 +325,69 @@ export async function acceptOffer(offerId: string) {
 
   if (!offer) throw new Error("Offer not found");
 
+  // Accept this offer
   await supabase
     .from("offers")
     .update({ status: "accepted", kind: "accept" })
     .eq("id", offerId);
 
+  // Lock the job and record agreement timestamp
+  const now = new Date().toISOString();
   await supabase
     .from("jobs")
     .update({
       status: "locked",
       agreed_price_cents: offer.price_cents,
       final_offer_id: offerId,
-      contact_released_at: new Date().toISOString(),
+      contact_released_at: now,
+      agreement_accepted_at: now,
     })
     .eq("id", offer.job_id);
 
+  // Reject all other offers
   await supabase
     .from("offers")
     .update({ status: "rejected" })
     .eq("job_id", offer.job_id)
     .neq("id", offerId);
 
+  // Fetch full job details for the agreement email
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("title, description, location_city, location_state, junk_types")
+    .eq("id", offer.job_id)
+    .single();
+
+  // Fetch provider details
   const { data: provider } = await supabase
     .from("profiles")
     .select("email, display_name")
     .eq("id", offer.provider_id)
     .single();
 
-  const { data: job } = await supabase
-    .from("jobs")
-    .select("title")
-    .eq("id", offer.job_id)
+  // Fetch customer details (including contact info for the provider email)
+  const { data: customerProfile } = await supabase
+    .from("profiles")
+    .select("email, display_name, phone_number")
+    .eq("id", offer.customer_id)
     .single();
 
-  if (provider && job) {
+  if (provider && job && customerProfile) {
     try {
-      const { data: customerProfile } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", offer.customer_id)
-        .single();
-
-      if (customerProfile) {
-        await sendOfferAccepted(
-          provider.email,
-          customerProfile.display_name,
-          job.title,
-          offer.price_cents
-        );
-      }
+      await sendServiceAgreement({
+        customerName: customerProfile.display_name,
+        customerEmail: customerProfile.email,
+        customerPhone: customerProfile.phone_number || null,
+        providerName: provider.display_name,
+        providerEmail: provider.email,
+        jobTitle: job.title,
+        jobDescription: job.description || "",
+        jobCity: job.location_city || "",
+        jobState: job.location_state || "",
+        junkTypes: job.junk_types || [],
+        agreedPriceCents: offer.price_cents,
+        date: now,
+      });
     } catch {
       // Continue even if email fails
     }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { acceptOffer } from "@/actions/offers";
 import { cancelJob } from "@/actions/jobs";
 import { sendMessage, getMessages } from "@/actions/messages";
 import { CheckCircle, XCircle, AlertTriangle, Send } from "lucide-react";
@@ -10,38 +9,58 @@ import { createClient } from "@/lib/supabase/browser";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
+import { AcceptOfferModal } from "@/components/jobs/accept-offer-modal";
 
-// Accept Offer Button
-export function AcceptOfferButton({ offerId }: { offerId: string }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// Accept Offer Button — opens the Service Agreement modal
+interface AcceptOfferButtonProps {
+  offerId: string;
+  offerPriceCents: number;
+  providerName: string;
+  customerName: string;
+  jobTitle: string;
+  jobDescription: string;
+  jobCity: string;
+  jobState: string;
+  junkTypes: string[];
+}
 
-  async function handleAccept() {
-    setLoading(true);
-    setError(null);
-    try {
-      await acceptOffer(offerId);
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to accept offer");
-    } finally {
-      setLoading(false);
-    }
-  }
+export function AcceptOfferButton({
+  offerId,
+  offerPriceCents,
+  providerName,
+  customerName,
+  jobTitle,
+  jobDescription,
+  jobCity,
+  jobState,
+  junkTypes,
+}: AcceptOfferButtonProps) {
+  const [showModal, setShowModal] = useState(false);
 
   return (
-    <div>
+    <>
       <button
-        onClick={handleAccept}
-        disabled={loading}
-        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50"
+        onClick={() => setShowModal(true)}
+        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
       >
         <CheckCircle className="w-4 h-4" />
-        {loading ? "Accepting..." : "Accept Offer"}
+        Accept Offer
       </button>
-      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
-    </div>
+
+      <AcceptOfferModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        offerId={offerId}
+        offerPriceCents={offerPriceCents}
+        providerName={providerName}
+        customerName={customerName}
+        jobTitle={jobTitle}
+        jobDescription={jobDescription}
+        jobCity={jobCity}
+        jobState={jobState}
+        junkTypes={junkTypes}
+      />
+    </>
   );
 }
 
