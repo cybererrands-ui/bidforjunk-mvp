@@ -79,7 +79,7 @@ export default async function CustomerDashboard() {
                     <Badge>{JOB_STATUS_LABELS[job.status]}</Badge>
                   </div>
                   <p className="text-gray-600 text-sm mb-2">
-                    {job.location_city}, {job.location_state}
+                    {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
                   </p>
                   <div className="flex justify-between items-center">
                     {job.agreed_price_cents ? (

@@ -54,7 +54,7 @@ export default async function ProviderJobsPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{job.title}</h3>
                     <p className="text-gray-600 text-sm">
-                      {job.location_city}, {job.location_state}
+                      {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
                     </p>
                   </div>
                 </div>

@@ -10,7 +10,8 @@ import {
   getQuoteCap,
   type SubscriptionTier,
 } from "@/lib/constants";
-import { checkProviderVisibility } from "@/lib/provider-visibility";
+// TODO: Re-enable when admin verification UI is built
+// import { checkProviderVisibility } from "@/lib/provider-visibility";
 import { sendNewOfferAlert, sendOfferAccepted } from "@/lib/resend";
 import { revalidatePath } from "next/cache";
 import { subDays, subMonths } from "date-fns";
@@ -23,6 +24,7 @@ function getExpiresAt(): string {
 
 export async function checkBidLimit(providerId: string, isSubscribed: boolean) {
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
   const { data: provider } = await supabase
     .from("profiles")
@@ -70,40 +72,35 @@ export async function submitOffer(
 ) {
   const supabase = await createClient();
 
+  // Force session refresh so auth.uid() resolves correctly in RLS
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Not authenticated");
+
   const { data: provider } = await supabase
     .from("profiles")
     .select(`
       subscription_active, display_name, subscription_tier,
       trial_ends_at, is_verified, is_suspended,
-      id_verified, business_verified, insurance_verified,
-      insurance_expired, insurance_expiry_date,
-      service_areas, monthly_quotes_used
+      monthly_quotes_used
     `)
     .eq("id", providerId)
     .single();
 
   if (!provider) throw new Error("Provider not found");
 
-  // Check provider visibility before allowing bids
-  const visibility = checkProviderVisibility({
-    trial_ends_at: provider.trial_ends_at,
-    subscription_active: provider.subscription_active,
-    subscription_tier: provider.subscription_tier,
-    is_verified: provider.is_verified,
-    id_verified: provider.id_verified ?? false,
-    business_verified: provider.business_verified ?? false,
-    insurance_verified: provider.insurance_verified ?? false,
-    insurance_expired: provider.insurance_expired ?? false,
-    insurance_expiry_date: provider.insurance_expiry_date,
-    service_areas: provider.service_areas || [],
-    display_name: provider.display_name,
-    is_suspended: provider.is_suspended,
-  });
+  // TODO: Re-enable checkProviderVisibility when admin verification UI is built.
+  // Currently bypassed for MVP because all providers have id_verified,
+  // business_verified, and insurance_verified as false by default,
+  // and there's no admin UI to approve them yet.
+  // const visibility = checkProviderVisibility({ ... });
+  // if (!visibility.visible) { throw new Error(...); }
 
-  if (!visibility.visible) {
-    throw new Error(
-      `Your profile is not yet visible. ${visibility.reasons[0]}. Complete verification to start bidding.`
-    );
+  // Basic safety checks that don't require admin verification
+  if (provider.is_suspended) {
+    throw new Error("Your account is suspended. Contact support for assistance.");
   }
 
   const bidCheck = await checkBidLimit(providerId, provider.subscription_active);

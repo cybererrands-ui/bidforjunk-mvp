@@ -296,7 +296,7 @@ export default function ProviderJobDetail({ jobId }: { jobId: string }) {
         <div>
           <h1 className="text-2xl font-bold">{job.title}</h1>
           <p className="text-gray-600 mt-1">
-            {job.location_city}, {job.location_state}
+            {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
           </p>
         </div>
         <JobStatusBadge status={job.status as JobStatus} />

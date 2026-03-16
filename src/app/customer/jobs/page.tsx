@@ -48,7 +48,7 @@ export default async function CustomerJobsPage() {
                   <Badge>{JOB_STATUS_LABELS[job.status as keyof typeof JOB_STATUS_LABELS]}</Badge>
                 </div>
                 <p className="text-gray-600 text-sm mb-2">
-                  {job.location_city}, {job.location_state}
+                  {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
                 </p>
                 <p className="text-gray-500 text-sm mb-3 line-clamp-2">{job.description}</p>
                 <div className="flex justify-between items-center">

@@ -112,7 +112,7 @@ export default async function JobDetailPage({
         <div>
           <h1 className="text-2xl font-bold">{job.title}</h1>
           <p className="text-gray-600 mt-1">
-            {job.location_city}, {job.location_state}
+            {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
           </p>
         </div>
         <div className="flex items-center gap-3">

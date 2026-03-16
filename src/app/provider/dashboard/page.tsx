@@ -60,17 +60,18 @@ export default async function ProviderDashboard() {
   );
 
   /* ---- earnings ---- */
-  const { data: earnings } = await supabase
-    .from("jobs")
-    .select("agreed_price_cents")
-    .eq("status", "released")
-    .in(
-      "final_offer_id",
-      (offers || []).map((o) => o.id)
-    );
+  let totalEarnings = 0;
+  const offerIds = (offers || []).map((o: any) => o.id);
+  if (offerIds.length > 0) {
+    const { data: earnings } = await supabase
+      .from("jobs")
+      .select("agreed_price_cents")
+      .eq("status", "released")
+      .in("final_offer_id", offerIds);
 
-  const totalEarnings =
-    earnings?.reduce((sum, job) => sum + (job.agreed_price_cents || 0), 0) || 0;
+    totalEarnings =
+      earnings?.reduce((sum, job) => sum + (job.agreed_price_cents || 0), 0) || 0;
+  }
 
   return (
     <div className="space-y-8">
@@ -126,7 +127,7 @@ export default async function ProviderDashboard() {
                     <Badge variant="info">New</Badge>
                   </div>
                   <p className="text-gray-600 text-sm mb-2">
-                    {job.location_city}, {job.location_state}
+                    {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
                   </p>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {job.junk_types?.map((type: string) => (
@@ -173,7 +174,7 @@ export default async function ProviderDashboard() {
                         <Badge>{JOB_STATUS_LABELS[job.status as keyof typeof JOB_STATUS_LABELS]}</Badge>
                       </div>
                       <p className="text-gray-600 text-sm mb-2">
-                        {job.location_city}, {job.location_state}
+                        {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
                       </p>
                       <div className="flex justify-between items-center">
                         {job.agreed_price_cents ? (
