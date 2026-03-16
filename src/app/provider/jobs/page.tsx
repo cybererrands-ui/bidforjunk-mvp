@@ -9,6 +9,7 @@ import Link from "next/link";
 export default async function ProviderJobsPage() {
   const user = await requireProvider();
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
   // All open/negotiating jobs — every hauler sees everything
   const { data: jobs, error: jobsError } = await supabase

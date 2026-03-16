@@ -10,6 +10,7 @@ import Link from "next/link";
 export default async function ProviderDashboard() {
   const user = await requireProvider();
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
   /* ---- offers the provider has already placed ---- */
   const { data: offers } = await supabase
