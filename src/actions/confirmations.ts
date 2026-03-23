@@ -2,10 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CONFIRMATION_DEADLINE_HOURS } from "@/lib/constants";
-import { releaseEscrow } from "@/actions/escrow";
+import { CONFIRMATION_DEADLINE_HOURS, SILENT_SIDE_RELEASE_HOURS } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
-import { addHours } from "date-fns";
+import { addHours, differenceInHours } from "date-fns";
 
 export async function confirmCompletion(
   jobId: string,
@@ -23,8 +22,13 @@ export async function confirmCompletion(
     .eq("id", jobId)
     .single();
 
-  if (!job || job.status !== "completed") {
-    throw new Error("Job is not in completed state");
+  if (!job || (job.status !== "completed" && job.status !== "in_progress")) {
+    throw new Error("Job is not in a completable state");
+  }
+
+  // If job is in_progress, transition to completed first
+  if (job.status === "in_progress") {
+    await admin.from("jobs").update({ status: "completed" }).eq("id", jobId);
   }
 
   let { data: confirmation } = await supabase
@@ -61,16 +65,47 @@ export async function confirmCompletion(
     .eq("job_id", jobId)
     .single();
 
+  // Both sides confirmed -- mark job as released
   if (updatedConfirm?.provider_confirmed && updatedConfirm?.customer_confirmed) {
-    await releaseEscrow(jobId);
+    await admin.from("jobs").update({ status: "released" }).eq("id", jobId);
   }
 
   revalidatePath(`/customer/jobs/${jobId}`);
   revalidatePath(`/provider/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
   return { confirmed: true };
 }
 
-export async function autoReleaseEscrow(jobId: string) {
+/**
+ * Checks whether the provider confirmed completion more than
+ * SILENT_SIDE_RELEASE_HOURS ago while the customer has NOT confirmed.
+ * Returns true when the job qualifies for admin-mediated release.
+ */
+export async function checkSilentSideRelease(jobId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { data: confirmation } = await supabase
+    .from("confirmations")
+    .select("*")
+    .eq("job_id", jobId)
+    .single();
+
+  if (!confirmation) return false;
+
+  // Provider must have confirmed, customer must NOT have confirmed
+  if (!confirmation.provider_confirmed || confirmation.customer_confirmed) {
+    return false;
+  }
+
+  if (!confirmation.provider_confirmed_at) return false;
+
+  const providerConfirmedAt = new Date(confirmation.provider_confirmed_at);
+  const hoursSinceProviderConfirmed = differenceInHours(new Date(), providerConfirmedAt);
+
+  return hoursSinceProviderConfirmed >= SILENT_SIDE_RELEASE_HOURS;
+}
+
+export async function autoReleaseJob(jobId: string) {
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -87,8 +122,9 @@ export async function autoReleaseEscrow(jobId: string) {
   if (now < deadline) throw new Error("Deadline not reached");
 
   await admin.from("confirmations").update({ auto_released: true }).eq("job_id", jobId);
-  await releaseEscrow(jobId);
+  await admin.from("jobs").update({ status: "released" }).eq("id", jobId);
 
   revalidatePath(`/customer/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
   return { auto_released: true };
 }

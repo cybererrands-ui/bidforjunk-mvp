@@ -1,0 +1,111 @@
+import { formatCurrency } from "@/lib/utils";
+import { JUNK_TYPES } from "@/lib/constants";
+import type { JunkType } from "@/lib/types";
+
+export interface AgreementParams {
+  customerName: string;
+  providerName: string;
+  jobTitle: string;
+  jobDescription: string;
+  jobCity: string;
+  jobState: string;
+  junkTypes: string[];
+  agreedPriceCents: number;
+  date: string; // ISO date string
+}
+
+export const AGREEMENT_TERMS = [
+  "This is a NON-BINDING agreement confirming mutual interest between the Customer and Provider. It does not constitute a legal contract.",
+  "The Provider will contact the Customer to schedule an on-site visit and inspection.",
+  "Final pricing and payment terms will be confirmed on-site before work begins.",
+  "Either party may cancel at any time before work begins, at no cost.",
+  "Hazardous materials (asbestos, chemicals, medical waste, flammable liquids) are excluded unless explicitly agreed upon in writing.",
+  "BidForJunk is a marketplace platform connecting customers with independent service providers. BidForJunk is not a party to this agreement and assumes no liability for services performed.",
+];
+
+export function formatJunkTypes(types: string[]): string {
+  return types
+    .map((t) => JUNK_TYPES[t as JunkType] || t)
+    .join(", ");
+}
+
+function formatAgreementDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString("en-CA", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/**
+ * Generates the service agreement as an HTML string for use in emails.
+ */
+export function generateAgreementHtml(params: AgreementParams): string {
+  const {
+    customerName,
+    providerName,
+    jobTitle,
+    jobDescription,
+    jobCity,
+    jobState,
+    junkTypes,
+    agreedPriceCents,
+    date,
+  } = params;
+
+  const location = [jobCity, jobState].filter(Boolean).join(", ") || "Not specified";
+  const formattedDate = formatAgreementDate(date);
+  const formattedPrice = formatCurrency(agreedPriceCents);
+  const formattedTypes = formatJunkTypes(junkTypes);
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #16a34a;">
+        <h1 style="color: #16a34a; margin: 0; font-size: 22px;">BidForJunk Service Agreement</h1>
+        <p style="color: #666; margin: 8px 0 0 0; font-size: 14px;">Date: ${formattedDate}</p>
+      </div>
+
+      <div style="padding: 20px 0;">
+        <h2 style="font-size: 16px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Parties</h2>
+        <p style="margin: 8px 0;"><strong>Customer:</strong> ${customerName}</p>
+        <p style="margin: 8px 0;"><strong>Service Provider:</strong> ${providerName}</p>
+      </div>
+
+      <div style="padding: 20px 0;">
+        <h2 style="font-size: 16px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Job Details</h2>
+        <p style="margin: 8px 0;"><strong>${jobTitle}</strong></p>
+        <p style="margin: 8px 0;"><strong>Location:</strong> ${location}</p>
+        <p style="margin: 8px 0;"><strong>Junk Types:</strong> ${formattedTypes}</p>
+        <p style="margin: 8px 0; color: #555;">${jobDescription}</p>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 16px 0; text-align: center;">
+        <p style="color: #666; margin: 0 0 4px 0; font-size: 14px;">Estimated Price</p>
+        <p style="color: #16a34a; font-size: 28px; font-weight: bold; margin: 0;">${formattedPrice} CAD</p>
+      </div>
+
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.5;">
+          <strong>⚠ IMPORTANT:</strong> This price is an estimate based on photos and description provided by the Customer.
+          The final price is <strong>SUBJECT TO ADJUSTMENT</strong> following the Provider's on-site inspection of the items.
+          If the scope of work differs materially from what was described, the Provider may propose an adjusted price before
+          beginning work. The Customer may accept the adjusted price or cancel at no charge.
+        </p>
+      </div>
+
+      <div style="padding: 20px 0;">
+        <h2 style="font-size: 16px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Terms</h2>
+        <ol style="padding-left: 20px; color: #555; font-size: 14px; line-height: 1.6;">
+          ${AGREEMENT_TERMS.map((term) => `<li style="margin-bottom: 8px;">${term}</li>`).join("")}
+        </ol>
+      </div>
+
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
+        <p style="color: #999; font-size: 11px; text-align: center; margin: 0;">
+          This is a non-binding service agreement generated by BidForJunk.
+          BidForJunk is a marketplace and is not a party to this agreement.
+        </p>
+      </div>
+    </div>
+  `;
+}

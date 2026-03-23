@@ -8,8 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { JUNK_TYPES } from "@/lib/constants";
-import { createJob } from "@/actions/jobs";
+import { JUNK_TYPES, CURRENCY_SYMBOL, PROVINCES } from "@/lib/constants";
+import { createJob, uploadJobPhotos } from "@/actions/jobs";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+
+const CANADIAN_PROVINCES = Object.entries(PROVINCES).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 export default function NewJobPage() {
   const router = useRouter();
@@ -17,6 +23,7 @@ export default function NewJobPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -25,6 +32,8 @@ export default function NewJobPage() {
     location_address: "",
     junk_types: [] as string[],
     estimated_volume: "",
+    budget_dollars: "",
+    preferred_time: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +53,13 @@ export default function NewJobPage() {
 
       if (!profile) throw new Error("Profile not found");
 
+      // Convert budget from dollars to cents
+      const budgetDollars = parseFloat(formData.budget_dollars);
+      if (isNaN(budgetDollars) || budgetDollars <= 0) {
+        throw new Error("Please enter a valid budget amount");
+      }
+      const budgetCents = Math.round(budgetDollars * 100);
+
       const job = await createJob(profile.id, {
         title: formData.title,
         description: formData.description,
@@ -52,7 +68,19 @@ export default function NewJobPage() {
         location_address: formData.location_address,
         junk_types: formData.junk_types as any,
         estimated_volume: formData.estimated_volume || undefined,
+        budget_cents: budgetCents,
+        preferred_time: formData.preferred_time || undefined,
       });
+
+      // Upload photos if any were selected
+      if (photos.length > 0) {
+        try {
+          await uploadJobPhotos(job.id, photos);
+        } catch {
+          // Job was created, photos failed - continue to job page
+          console.error("Photo upload failed, but job was created");
+        }
+      }
 
       router.push(`/customer/jobs/${job.id}`);
     } catch (err) {
@@ -69,6 +97,12 @@ export default function NewJobPage() {
         ? prev.junk_types.filter((t) => t !== type)
         : [...prev.junk_types, type],
     }));
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setPhotos(Array.from(e.target.files));
+    }
   };
 
   return (
@@ -126,20 +160,51 @@ export default function NewJobPage() {
           </div>
 
           <Input
-            label="City"
-            value={formData.location_city}
+            label={`Budget (${CURRENCY_SYMBOL} CAD)`}
+            type="number"
+            min="1"
+            step="0.01"
+            value={formData.budget_dollars}
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
-                location_city: e.target.value,
+                budget_dollars: e.target.value,
               }))
             }
-            placeholder="e.g., New York"
+            placeholder="e.g., 250.00"
+            required
+          />
+
+          <Input
+            label="Preferred Time"
+            value={formData.preferred_time}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                preferred_time: e.target.value,
+              }))
+            }
+            placeholder="e.g., Weekday mornings, ASAP, or any specific date"
+          />
+
+          <CityAutocomplete
+            mode="single"
+            label="City"
+            value={formData.location_city}
+            province={formData.location_state}
+            onChange={(city, province) =>
+              setFormData((prev) => ({
+                ...prev,
+                location_city: city,
+                location_state: province,
+              }))
+            }
+            placeholder="Start typing your city..."
             required
           />
 
           <Select
-            label="State"
+            label="Province"
             value={formData.location_state}
             onChange={(e) =>
               setFormData((prev) => ({
@@ -147,58 +212,7 @@ export default function NewJobPage() {
                 location_state: e.target.value,
               }))
             }
-            options={[
-              { value: "AL", label: "Alabama" },
-              { value: "AK", label: "Alaska" },
-              { value: "AZ", label: "Arizona" },
-              { value: "AR", label: "Arkansas" },
-              { value: "CA", label: "California" },
-              { value: "CO", label: "Colorado" },
-              { value: "CT", label: "Connecticut" },
-              { value: "DE", label: "Delaware" },
-              { value: "FL", label: "Florida" },
-              { value: "GA", label: "Georgia" },
-              { value: "HI", label: "Hawaii" },
-              { value: "ID", label: "Idaho" },
-              { value: "IL", label: "Illinois" },
-              { value: "IN", label: "Indiana" },
-              { value: "IA", label: "Iowa" },
-              { value: "KS", label: "Kansas" },
-              { value: "KY", label: "Kentucky" },
-              { value: "LA", label: "Louisiana" },
-              { value: "ME", label: "Maine" },
-              { value: "MD", label: "Maryland" },
-              { value: "MA", label: "Massachusetts" },
-              { value: "MI", label: "Michigan" },
-              { value: "MN", label: "Minnesota" },
-              { value: "MS", label: "Mississippi" },
-              { value: "MO", label: "Missouri" },
-              { value: "MT", label: "Montana" },
-              { value: "NE", label: "Nebraska" },
-              { value: "NV", label: "Nevada" },
-              { value: "NH", label: "New Hampshire" },
-              { value: "NJ", label: "New Jersey" },
-              { value: "NM", label: "New Mexico" },
-              { value: "NY", label: "New York" },
-              { value: "NC", label: "North Carolina" },
-              { value: "ND", label: "North Dakota" },
-              { value: "OH", label: "Ohio" },
-              { value: "OK", label: "Oklahoma" },
-              { value: "OR", label: "Oregon" },
-              { value: "PA", label: "Pennsylvania" },
-              { value: "RI", label: "Rhode Island" },
-              { value: "SC", label: "South Carolina" },
-              { value: "SD", label: "South Dakota" },
-              { value: "TN", label: "Tennessee" },
-              { value: "TX", label: "Texas" },
-              { value: "UT", label: "Utah" },
-              { value: "VT", label: "Vermont" },
-              { value: "VA", label: "Virginia" },
-              { value: "WA", label: "Washington" },
-              { value: "WV", label: "West Virginia" },
-              { value: "WI", label: "Wisconsin" },
-              { value: "WY", label: "Wyoming" },
-            ]}
+            options={CANADIAN_PROVINCES}
             required
           />
 
@@ -226,6 +240,24 @@ export default function NewJobPage() {
             }
             placeholder="e.g., 2 truckloads"
           />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Photos (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoChange}
+              className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100"
+            />
+            {photos.length > 0 && (
+              <p className="text-sm text-gray-500 mt-1">
+                {photos.length} photo{photos.length !== 1 ? "s" : ""} selected
+              </p>
+            )}
+          </div>
 
           <div className="flex gap-4">
             <Button type="submit" loading={loading} className="flex-1">

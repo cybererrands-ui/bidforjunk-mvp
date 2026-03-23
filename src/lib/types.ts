@@ -3,9 +3,12 @@ export type JobStatus =
   | "open"
   | "negotiating"
   | "locked"
+  | "accepted"
+  | "ready_for_dispatch"
   | "dispatched"
   | "in_progress"
   | "completed"
+  | "pending_admin_release"
   | "released"
   | "cancelled"
   | "disputed";
@@ -25,7 +28,10 @@ export type ResolutionType =
   | "customer_refund"
   | "provider_payment"
   | "split"
-  | "dismissed";
+  | "dismissed"
+  | "price_adjusted"
+  | "partial_refund"
+  | "full_refund";
 export type NotificationType =
   | "newJobAlert"
   | "newOfferAlert"
@@ -68,6 +74,54 @@ export interface Database {
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
+          // Identity verification (Phase 1 retrofit)
+          legal_full_name: string | null;
+          date_of_birth: string | null;
+          id_type: string | null;
+          id_expiry_date: string | null;
+          id_document_url: string | null;
+          id_verified: boolean;
+          id_verified_at: string | null;
+          id_rejection_note: string | null;
+          // Business verification
+          legal_business_name: string | null;
+          operating_name: string | null;
+          business_registration_number: string | null;
+          province_of_registration: string | null;
+          business_type: string | null;
+          business_address: string | null;
+          business_phone: string | null;
+          business_email: string | null;
+          business_website: string | null;
+          business_verified: boolean;
+          business_verified_at: string | null;
+          business_rejection_note: string | null;
+          // Insurance verification
+          insurer_name: string | null;
+          insurance_policy_number: string | null;
+          insurance_coverage_type: string | null;
+          insurance_coverage_amount: number | null;
+          insurance_effective_date: string | null;
+          insurance_expiry_date: string | null;
+          insurance_certificate_url: string | null;
+          insurance_verified: boolean;
+          insurance_verified_at: string | null;
+          insurance_rejection_note: string | null;
+          insurance_expired: boolean;
+          // Operations
+          truck_size: string | null;
+          crew_size: number | null;
+          same_day_available: boolean;
+          disposal_practices: string | null;
+          hours_of_operation: string | null;
+          // Additional provider fields
+          years_in_business: number | null;
+          payment_methods_accepted: string[];
+          fleet_photos_urls: string[];
+          // Subscription tier
+          subscription_tier: string;
+          monthly_quotes_used: number;
+          monthly_quotes_reset_at: string | null;
         };
         Insert: {
           user_id: string;
@@ -95,6 +149,42 @@ export interface Database {
           total_jobs_completed?: number;
           total_reviews?: number;
           deleted_at?: string | null;
+          legal_full_name?: string | null;
+          date_of_birth?: string | null;
+          id_type?: string | null;
+          id_expiry_date?: string | null;
+          id_document_url?: string | null;
+          id_verified?: boolean;
+          legal_business_name?: string | null;
+          operating_name?: string | null;
+          business_registration_number?: string | null;
+          province_of_registration?: string | null;
+          business_type?: string | null;
+          business_address?: string | null;
+          business_phone?: string | null;
+          business_email?: string | null;
+          business_website?: string | null;
+          business_verified?: boolean;
+          insurer_name?: string | null;
+          insurance_policy_number?: string | null;
+          insurance_coverage_type?: string | null;
+          insurance_coverage_amount?: number | null;
+          insurance_effective_date?: string | null;
+          insurance_expiry_date?: string | null;
+          insurance_certificate_url?: string | null;
+          insurance_verified?: boolean;
+          insurance_expired?: boolean;
+          truck_size?: string | null;
+          crew_size?: number | null;
+          same_day_available?: boolean;
+          disposal_practices?: string | null;
+          hours_of_operation?: string | null;
+          years_in_business?: number | null;
+          payment_methods_accepted?: string[];
+          fleet_photos_urls?: string[];
+          subscription_tier?: string;
+          monthly_quotes_used?: number;
+          monthly_quotes_reset_at?: string | null;
         };
         Update: {
           user_id?: string;
@@ -122,6 +212,48 @@ export interface Database {
           total_jobs_completed?: number;
           total_reviews?: number;
           deleted_at?: string | null;
+          legal_full_name?: string | null;
+          date_of_birth?: string | null;
+          id_type?: string | null;
+          id_expiry_date?: string | null;
+          id_document_url?: string | null;
+          id_verified?: boolean;
+          id_verified_at?: string | null;
+          id_rejection_note?: string | null;
+          legal_business_name?: string | null;
+          operating_name?: string | null;
+          business_registration_number?: string | null;
+          province_of_registration?: string | null;
+          business_type?: string | null;
+          business_address?: string | null;
+          business_phone?: string | null;
+          business_email?: string | null;
+          business_website?: string | null;
+          business_verified?: boolean;
+          business_verified_at?: string | null;
+          business_rejection_note?: string | null;
+          insurer_name?: string | null;
+          insurance_policy_number?: string | null;
+          insurance_coverage_type?: string | null;
+          insurance_coverage_amount?: number | null;
+          insurance_effective_date?: string | null;
+          insurance_expiry_date?: string | null;
+          insurance_certificate_url?: string | null;
+          insurance_verified?: boolean;
+          insurance_verified_at?: string | null;
+          insurance_rejection_note?: string | null;
+          insurance_expired?: boolean;
+          truck_size?: string | null;
+          crew_size?: number | null;
+          same_day_available?: boolean;
+          disposal_practices?: string | null;
+          hours_of_operation?: string | null;
+          years_in_business?: number | null;
+          payment_methods_accepted?: string[];
+          fleet_photos_urls?: string[];
+          subscription_tier?: string;
+          monthly_quotes_used?: number;
+          monthly_quotes_reset_at?: string | null;
         };
       };
       jobs: {
@@ -137,10 +269,14 @@ export interface Database {
           location_coordinates: string | null;
           junk_types: JunkType[];
           estimated_volume: string | null;
+          budget_cents: number | null;
+          preferred_time: string | null;
           photos_urls: string[];
           status: JobStatus;
           agreed_price_cents: number | null;
           final_offer_id: string | null;
+          contact_released_at: string | null;
+          agreement_accepted_at: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -156,10 +292,14 @@ export interface Database {
           location_coordinates?: string | null;
           junk_types: JunkType[];
           estimated_volume?: string | null;
+          budget_cents?: number | null;
+          preferred_time?: string | null;
           photos_urls?: string[];
           status?: JobStatus;
           agreed_price_cents?: number | null;
           final_offer_id?: string | null;
+          contact_released_at?: string | null;
+          agreement_accepted_at?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -173,10 +313,14 @@ export interface Database {
           location_coordinates?: string | null;
           junk_types?: JunkType[];
           estimated_volume?: string | null;
+          budget_cents?: number | null;
+          preferred_time?: string | null;
           photos_urls?: string[];
           status?: JobStatus;
           agreed_price_cents?: number | null;
           final_offer_id?: string | null;
+          contact_released_at?: string | null;
+          agreement_accepted_at?: string | null;
           deleted_at?: string | null;
         };
       };
@@ -190,6 +334,8 @@ export interface Database {
           status: OfferStatus;
           price_cents: number;
           notes: string | null;
+          turn_number: number;
+          expires_at: string | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -202,6 +348,8 @@ export interface Database {
           status: string;
           price_cents: number;
           notes?: string | null;
+          turn_number?: number;
+          expires_at?: string | null;
           deleted_at?: string | null;
         };
         Update: {
@@ -212,6 +360,30 @@ export interface Database {
           status?: string;
           price_cents?: number;
           notes?: string | null;
+          turn_number?: number;
+          expires_at?: string | null;
+          deleted_at?: string | null;
+        };
+      };
+      messages: {
+        Row: {
+          id: string;
+          job_id: string;
+          sender_id: string;
+          content: string;
+          created_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          job_id: string;
+          sender_id: string;
+          content: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          job_id?: string;
+          sender_id?: string;
+          content?: string;
           deleted_at?: string | null;
         };
       };
@@ -521,10 +693,13 @@ export interface Database {
 export const VALID_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   open: ["negotiating", "cancelled"],
   negotiating: ["open", "locked", "cancelled"],
-  locked: ["dispatched", "cancelled"],
+  locked: ["accepted", "cancelled"],
+  accepted: ["ready_for_dispatch", "cancelled", "disputed"],
+  ready_for_dispatch: ["dispatched", "cancelled"],
   dispatched: ["in_progress", "cancelled"],
   in_progress: ["completed", "disputed", "cancelled"],
-  completed: ["released", "disputed", "cancelled"],
+  completed: ["released", "disputed", "pending_admin_release", "cancelled"],
+  pending_admin_release: ["released", "disputed", "cancelled"],
   released: [],
   cancelled: [],
   disputed: ["released", "cancelled"],

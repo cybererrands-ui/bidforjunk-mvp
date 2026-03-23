@@ -15,10 +15,25 @@ export async function createJob(
     location_address: string;
     junk_types: JunkType[];
     estimated_volume?: string;
+    budget_cents?: number;
+    preferred_time?: string;
     photos_urls?: string[];
   }
 ) {
   const supabase = await createClient();
+
+  // Verify auth session is active (required for RLS)
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Validate city is not empty (guard against autocomplete bypass)
+  if (!data.location_city || !data.location_city.trim()) {
+    throw new Error("City is required");
+  }
+
+  const citySlug = slugifyCity(data.location_city);
 
   const { data: job, error } = await supabase
     .from("jobs")
@@ -26,12 +41,14 @@ export async function createJob(
       customer_id: customerId,
       title: data.title,
       description: data.description,
-      location_city: data.location_city,
-      location_city_slug: slugifyCity(data.location_city),
+      location_city: data.location_city.trim(),
+      location_city_slug: citySlug,
       location_state: data.location_state,
       location_address: data.location_address,
       junk_types: data.junk_types,
       estimated_volume: data.estimated_volume || null,
+      budget_cents: data.budget_cents || null,
+      preferred_time: data.preferred_time || null,
       photos_urls: data.photos_urls || [],
       status: "open",
     })
@@ -42,11 +59,13 @@ export async function createJob(
 
   revalidatePath("/customer/dashboard");
   revalidatePath("/provider/jobs");
+  revalidatePath("/provider/dashboard");
   return job;
 }
 
 export async function cancelJob(jobId: string) {
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
   const { error } = await supabase
     .from("jobs")
@@ -96,6 +115,7 @@ export async function uploadJobPhotos(jobId: string, photos: File[]) {
 
 export async function transitionJobStatus(jobId: string, newStatus: JobStatus) {
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
   const { data: job } = await supabase
     .from("jobs")

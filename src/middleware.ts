@@ -32,6 +32,11 @@ export async function middleware(request: NextRequest) {
 
   const pathname = requestUrl.pathname;
 
+  // Admin login page is public — skip auth check
+  if (pathname === "/admin/login") {
+    return response;
+  }
+
   // Protected routes - require authentication
   const protectedRoutes = ["/customer", "/provider", "/admin"];
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -39,7 +44,9 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isProtectedRoute && !user) {
-    return NextResponse.redirect(new URL("/signup", request.url));
+    // Non-admin routes redirect to signup; admin routes redirect to admin login
+    const dest = pathname.startsWith("/admin") ? "/admin/login" : "/signup";
+    return NextResponse.redirect(new URL(dest, request.url));
   }
 
   // Role-based access

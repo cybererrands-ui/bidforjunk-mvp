@@ -9,48 +9,43 @@ import Link from "next/link";
 export default async function ProviderJobsPage() {
   const user = await requireProvider();
   const supabase = await createClient();
+  await supabase.auth.getUser(); // Force session validation for RLS
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("service_areas, junk_types")
-    .eq("id", user.id)
-    .single();
-
-  let query = supabase
+  // All open/negotiating jobs — every hauler sees everything
+  const { data: jobs, error: jobsError } = await supabase
     .from("jobs")
     .select("*")
-    .eq("status", "open")
+    .in("status", ["open", "negotiating"])
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
-  if (profile?.service_areas && profile.service_areas.length > 0) {
-    query = query.in(
-      "location_city_slug",
-      profile.service_areas.map((c: string) =>
-        c.toLowerCase().replace(/\s+/g, "-")
-      )
-    );
+  if (jobsError) {
+    console.error("Failed to load jobs:", jobsError);
   }
 
-  const { data: jobs } = await query;
+  // Exclude jobs this provider already bid on (they'll see those in their dashboard)
+  let filteredJobs = jobs || [];
+  const { data: myOffers } = await supabase
+    .from("offers")
+    .select("job_id")
+    .eq("provider_id", user.id)
+    .is("deleted_at", null);
 
-  const filteredJobs = jobs?.filter((job) => {
-    if (!profile?.junk_types || profile.junk_types.length === 0) return true;
-    return job.junk_types.some((type: string) =>
-      (profile.junk_types as string[]).includes(type)
-    );
-  });
+  if (myOffers && myOffers.length > 0) {
+    const myJobIds = new Set(myOffers.map((o) => o.job_id));
+    filteredJobs = filteredJobs.filter((job) => !myJobIds.has(job.id));
+  }
 
   return (
     <div className="space-y-8">
       <div>
         <h1>Available Jobs</h1>
         <p className="text-gray-600 mt-2">
-          Browse and bid on junk removal jobs in your service areas
+          Browse and bid on junk removal jobs across Canada
         </p>
       </div>
 
-      {filteredJobs && filteredJobs.length > 0 ? (
+      {filteredJobs.length > 0 ? (
         <div className="grid gap-6">
           {filteredJobs.map((job) => (
             <Link key={job.id} href={`/provider/jobs/${job.id}`}>
@@ -59,7 +54,7 @@ export default async function ProviderJobsPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{job.title}</h3>
                     <p className="text-gray-600 text-sm">
-                      {job.location_city}, {job.location_state}
+                      {[job.location_city, job.location_state].filter(Boolean).join(", ") || "Location not specified"}
                     </p>
                   </div>
                 </div>
@@ -87,8 +82,9 @@ export default async function ProviderJobsPage() {
         </div>
       ) : (
         <Card className="text-center py-12">
-          <p className="text-gray-600">
-            No jobs available in your service areas yet
+          <p className="text-gray-600 mb-2">No jobs available yet.</p>
+          <p className="text-sm text-gray-500">
+            New jobs are posted regularly. Check back soon!
           </p>
         </Card>
       )}

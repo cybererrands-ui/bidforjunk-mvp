@@ -24,15 +24,18 @@ export function Navbar({ userRole, userName }: NavbarProps) {
   const navigationLinks = {
     customer: [
       { label: "Dashboard", href: "/customer/dashboard" },
+      { label: "My Jobs", href: "/customer/jobs" },
       { label: "New Job", href: "/customer/jobs/new" },
     ],
     provider: [
       { label: "Dashboard", href: "/provider/dashboard" },
       { label: "Jobs", href: "/provider/jobs" },
+      { label: "Profile", href: "/provider/profile" },
     ],
     admin: [
       { label: "Dashboard", href: "/admin/dashboard" },
       { label: "Jobs", href: "/admin/jobs" },
+      { label: "Dispatch", href: "/admin/dispatch" },
       { label: "Disputes", href: "/admin/disputes" },
       { label: "Verifications", href: "/admin/verifications" },
       { label: "Users", href: "/admin/users" },

@@ -1,59 +1,10 @@
 import Stripe from "stripe";
-import { STRIPE_CAPTURE_METHOD, CURRENCY } from "@/lib/constants";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
 });
 
 export { stripe };
-
-export async function createEscrowHold(
-  customerId: string,
-  amountCents: number,
-  jobId: string
-): Promise<Stripe.PaymentIntent> {
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amountCents,
-    currency: CURRENCY.toLowerCase(),
-    customer: customerId,
-    capture_method: STRIPE_CAPTURE_METHOD,
-    metadata: {
-      jobId,
-      type: "escrow_hold",
-    },
-    statement_descriptor: `BidForJunk Job ${jobId.slice(0, 8)}`,
-  });
-
-  return paymentIntent;
-}
-
-export async function captureEscrow(
-  paymentIntentId: string
-): Promise<Stripe.PaymentIntent> {
-  const paymentIntent =
-    await stripe.paymentIntents.capture(paymentIntentId);
-  return paymentIntent;
-}
-
-export async function voidEscrow(
-  paymentIntentId: string
-): Promise<Stripe.PaymentIntent> {
-  const paymentIntent =
-    await stripe.paymentIntents.cancel(paymentIntentId);
-  return paymentIntent;
-}
-
-export async function refundEscrow(
-  paymentIntentId: string,
-  amountCents?: number
-): Promise<Stripe.Refund> {
-  const refund = await stripe.refunds.create({
-    payment_intent: paymentIntentId,
-    amount: amountCents,
-  });
-
-  return refund;
-}
 
 export async function createSubscriptionCheckout(
   customerId: string,
